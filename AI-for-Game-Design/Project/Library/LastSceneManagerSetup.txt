@@ -1,4 +1,0 @@
-sceneSetups:
-- path: Assets/Assignment 1 Scene.unity
-  isLoaded: 1
-  isActive: 1
