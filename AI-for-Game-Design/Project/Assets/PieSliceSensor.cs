@@ -20,7 +20,7 @@ public class PieSliceSensor : Sensor {
         }
     }
 
-    public enum Level { Low = 1, Med = 2, High = 3 };
+    public enum Level { Zero = 0, Low = 1, Med = 2, High = 3 };
     GameObject owner;
     GameObject lineDrawer;
 
@@ -50,7 +50,7 @@ public class PieSliceSensor : Sensor {
         //initialize the line renderer and line renderer holder object
         InitLineRenderer();
 
-        activationLevel = Level.Low;
+        activationLevel = Level.Zero;
     }
 
     //initializes the line renderer and holder object
@@ -90,7 +90,7 @@ public class PieSliceSensor : Sensor {
         lineRenderer.SetPosition(drawAbility, pos);
 
         //set the color according to activation level.
-        if (activationLevel == Level.Low)
+        if (activationLevel <= Level.Low)
         {
             lineRenderer.material.color = Color.white;
             lineRenderer.SetColors(Color.white, Color.white);
@@ -146,13 +146,15 @@ public class PieSliceSensor : Sensor {
                 //rather than doing inverse cos and comparing against the angle, we compare against
                 // the pre-computed inverse cos cutoff value.
                 if (dotProduct >= inverseCosCutoff)
-                    sensedObjects.Add(new AdjacentAgent(parentHeading, sensedPos, parentPos));
+                    sensedObjects.Add(new AdjacentAgent(sensedObject, parentHeading, sensedPos, parentPos));
             }
         }
 
-        if (sensedObjects.Count <= (int) Level.Low)
+        if (sensedObjects.Count == 0)
+            activationLevel = Level.Zero;
+        else if (sensedObjects.Count <= (int)Level.Low)
             activationLevel = Level.Low;
-        else if (sensedObjects.Count <= (int) Level.Med)
+        else if (sensedObjects.Count <= (int)Level.Med)
             activationLevel = Level.Med;
         else
             activationLevel = Level.High;

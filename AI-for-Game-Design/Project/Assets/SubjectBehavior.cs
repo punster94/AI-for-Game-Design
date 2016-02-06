@@ -59,9 +59,10 @@ public class SubjectBehavior : MonoBehaviour {
 
         // Sense the world
         if (frame++ == framesPerSense) {
+        //note that assignment requires updating every tick.
             sense();
             // Keeps the frame value low, but can be maintained with modulus if frame count is needed for something else
-            frame = 0;
+           frame = 0;
         }
 
         // Print the tooltip for each sensor owned by the subject

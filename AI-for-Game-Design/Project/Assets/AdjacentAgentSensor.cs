@@ -21,7 +21,7 @@ public class AdjacentAgentSensor : Sensor {
             Vector3 position = go.transform.position;
 
             if (Vector3.Distance(position, op) <= radius)
-                adjacentAgents.Add(new AdjacentAgent(oh, position, op));
+                adjacentAgents.Add(new AdjacentAgent(go, oh, position, op));
         }
 
         return adjacentAgents;
