@@ -29,6 +29,10 @@ public class SubjectBehavior : MonoBehaviour {
         // Initialize reference to self and sensor objects
         self = GameObject.Find(selfTag);
         sensors.Add(new AdjacentAgentSensor(self, sensableTag, aasRadius));
+        sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius * 1.3f, 0, 90));
+        sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius, 90, 90));
+        sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius * 0.5f, 180, 90));
+        sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius, 270, 90));
         frame = 0;
 
         // Initialize speed at zero
@@ -96,9 +100,16 @@ public class SubjectBehavior : MonoBehaviour {
     void sense() {
         foreach(Sensor s in sensors) {
             ArrayList sensedObjects = s.sense();
-
-            foreach (SensedObject sensedObj in sensedObjects)
-                Debug.Log(sensedObj.toString());
+            if (s.GetType() == typeof(AdjacentAgentSensor))
+            {
+                Debug.Log("Adjacent Agent Sensors:");
+                foreach (SensedObject sensedObj in sensedObjects)
+                    Debug.Log(sensedObj.toString());
+            }
+            else if (s.GetType() == typeof(PieSliceSensor))
+            {
+                Debug.Log(s.ToString());
+            }
         }
     }
 }

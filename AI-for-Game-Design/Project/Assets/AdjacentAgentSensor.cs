@@ -15,12 +15,13 @@ public class AdjacentAgentSensor : Sensor {
     public override ArrayList sense() {
         ArrayList potentiallySensedObjects = new ArrayList(sensableObjects()), adjacentAgents = new ArrayList();
         Vector3 op = ownerPosition();
+        Vector3 oh = ownerHeading();
 
         foreach(GameObject go in potentiallySensedObjects) {
             Vector3 position = go.transform.position;
 
             if (Vector3.Distance(position, op) <= radius)
-                adjacentAgents.Add(new AdjacentAgent(go, position, op));
+                adjacentAgents.Add(new AdjacentAgent(oh, position, op));
         }
 
         return adjacentAgents;

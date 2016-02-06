@@ -3,16 +3,15 @@ using System.Collections;
 
 public class AdjacentAgent : SensedObject {
     public string id;
-    public Vector3 position;
-    public Vector3 relativeHeading; 
+    public double distance;
+    public double relativeHeading; 
 
-    public AdjacentAgent(GameObject go, Vector3 p, Vector3 ownerPosition) {
-        position = p;
-        id = go.name;
-        relativeHeading = p - ownerPosition;
+    public AdjacentAgent(Vector3 ownerHeading, Vector3 p, Vector3 ownerPosition) {
+        distance = Vector3.Distance(p, ownerPosition);
+        relativeHeading = Vector3.Angle(ownerHeading, p - ownerPosition);
     }
 
     public override string toString(){
-        return "Id: " + id + " position: " + position + " " + relativeHeading + "\n";
+        return "(" + distance + "," + relativeHeading + ")";
     }
 }

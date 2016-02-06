@@ -17,6 +17,10 @@ public abstract class Sensor {
         return owner.transform.position;
     }
 
+    public Vector3 ownerHeading() {
+        return owner.transform.up;
+    }
+
     public GameObject[] sensableObjects() {
         return GameObject.FindGameObjectsWithTag(senseTag);
     }
