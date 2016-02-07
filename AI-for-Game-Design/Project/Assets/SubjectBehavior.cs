@@ -101,16 +101,7 @@ public class SubjectBehavior : MonoBehaviour {
     void sense() {
         foreach(Sensor s in sensors) {
             ArrayList sensedObjects = s.sense();
-            if (s.GetType() == typeof(AdjacentAgentSensor))
-            {
-                Debug.Log("Adjacent Agent Sensors:");
-                foreach (SensedObject sensedObj in sensedObjects)
-                    Debug.Log(sensedObj.toString());
-            }
-            else if (s.GetType() == typeof(PieSliceSensor))
-            {
-                Debug.Log(s.ToString());
-            }
+            Debug.Log(s.toString(sensedObjects));
         }
     }
 }

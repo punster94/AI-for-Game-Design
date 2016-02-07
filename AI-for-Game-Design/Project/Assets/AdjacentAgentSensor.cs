@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
 public class AdjacentAgentSensor : Sensor {
     private float radius;
@@ -29,5 +30,12 @@ public class AdjacentAgentSensor : Sensor {
 
     public override void drawTooltip() {
         tooltip.transform.position = ownerPosition();
+    }
+
+    public override string toString(ArrayList sensedObjects) {
+        string logMessage =  "Adjacent Agent Sensor on " + ownerName() + ": ";
+        foreach(SensedObject sensedObj in sensedObjects)
+            logMessage += (sensedObj.toString() + ", ");
+        return logMessage;
     }
 }

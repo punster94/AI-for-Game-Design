@@ -178,8 +178,8 @@ public class PieSliceSensor : Sensor {
         return "(" + v.x + "," + v.y + "," + v.z + ")";
     }
 
-    public override string ToString()
+    public override string toString(ArrayList _)
     {
-        return "PieSlice sensor @ " + relativeDirection * Mathf.Rad2Deg + ", activation level = " + ActivationLevel + ".";
+        return "PieSlice Sensor on " + ownerName() + " @ " + relativeDirection * Mathf.Rad2Deg + ", activation level = " + ActivationLevel + ".";
     }
 }

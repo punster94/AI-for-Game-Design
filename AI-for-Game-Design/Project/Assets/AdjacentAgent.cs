@@ -21,7 +21,7 @@ public class AdjacentAgent : SensedObject {
     }
 
     public override string toString() {
-        return "(id = " + id + ", distance = " + distance + ", direction = " + relativeHeading + ")";
+        return "(id = " + id + ", distance = " + distance.ToString("F") + ", direction = " + relativeHeading.ToString("F") + ")";
     }
 
     //we must detect the absolute heading.
