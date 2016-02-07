@@ -12,9 +12,18 @@ public abstract class Sensor {
 
     public abstract ArrayList sense();
     public abstract void drawTooltip();
+    public abstract string toString(ArrayList sensedObjects);
+
+    public string ownerName() {
+        return owner.name;
+    }
 
     public Vector3 ownerPosition() {
         return owner.transform.position;
+    }
+
+    public Vector3 ownerHeading() {
+        return owner.transform.up;
     }
 
     public GameObject[] sensableObjects() {

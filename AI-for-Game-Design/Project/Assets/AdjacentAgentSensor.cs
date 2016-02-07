@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
 public class AdjacentAgentSensor : Sensor {
     private float radius;
@@ -15,12 +16,13 @@ public class AdjacentAgentSensor : Sensor {
     public override ArrayList sense() {
         ArrayList potentiallySensedObjects = new ArrayList(sensableObjects()), adjacentAgents = new ArrayList();
         Vector3 op = ownerPosition();
+        Vector3 oh = ownerHeading();
 
         foreach(GameObject go in potentiallySensedObjects) {
             Vector3 position = go.transform.position;
 
             if (Vector3.Distance(position, op) <= radius)
-                adjacentAgents.Add(new AdjacentAgent(go, position, op));
+                adjacentAgents.Add(new AdjacentAgent(go, oh, position, op));
         }
 
         return adjacentAgents;
@@ -28,5 +30,12 @@ public class AdjacentAgentSensor : Sensor {
 
     public override void drawTooltip() {
         tooltip.transform.position = ownerPosition();
+    }
+
+    public override string toString(ArrayList sensedObjects) {
+        string logMessage =  "Adjacent Agent Sensor on " + ownerName() + ": ";
+        foreach(SensedObject sensedObj in sensedObjects)
+            logMessage += (sensedObj.toString() + ", ");
+        return logMessage;
     }
 }
