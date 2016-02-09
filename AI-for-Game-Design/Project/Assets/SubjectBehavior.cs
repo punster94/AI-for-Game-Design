@@ -103,8 +103,9 @@ public class SubjectBehavior : MonoBehaviour {
         // Transform the x, y (and z) position of the subject
         transform.position += currentSpeed* Time.deltaTime;
     }
-
+    
     void sense() {
+        Debug.Log("Subject at location: (" + self.transform.position.x + ", " + self.transform.position.y + ") and heading " + Vector3.Angle(self.transform.up, new Vector3(0f, 1f)));
         foreach(Sensor s in sensors) {
             ArrayList sensedObjects = s.sense();
             Debug.Log(s.toString(sensedObjects));
