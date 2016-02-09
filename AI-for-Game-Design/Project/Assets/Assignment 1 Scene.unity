@@ -210,9 +210,9 @@ GameObject:
   - 4: {fileID: 491974665}
   - 212: {fileID: 491974664}
   - 61: {fileID: 491974666}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Left Bound
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -341,9 +341,9 @@ GameObject:
   - 4: {fileID: 611000219}
   - 212: {fileID: 611000218}
   - 61: {fileID: 611000220}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wall2
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -682,9 +682,9 @@ GameObject:
   - 4: {fileID: 1254197619}
   - 212: {fileID: 1254197618}
   - 61: {fileID: 1254197620}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wall4
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -755,9 +755,9 @@ GameObject:
   - 4: {fileID: 1299749766}
   - 212: {fileID: 1299749765}
   - 61: {fileID: 1299749767}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Bottom Bound
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -828,9 +828,9 @@ GameObject:
   - 4: {fileID: 1438051523}
   - 212: {fileID: 1438051522}
   - 61: {fileID: 1438051524}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Right Bound
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -901,9 +901,9 @@ GameObject:
   - 4: {fileID: 1556597477}
   - 212: {fileID: 1556597476}
   - 61: {fileID: 1556597478}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wall1
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1065,9 +1065,9 @@ GameObject:
   - 4: {fileID: 1858656674}
   - 212: {fileID: 1858656673}
   - 61: {fileID: 1858656675}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wall3
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1138,9 +1138,9 @@ GameObject:
   - 4: {fileID: 1978625537}
   - 212: {fileID: 1978625536}
   - 61: {fileID: 1978625538}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Top Bound
-  m_TagString: Untagged
+  m_TagString: Wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
