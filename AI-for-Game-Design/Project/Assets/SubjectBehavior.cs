@@ -20,6 +20,7 @@ public class SubjectBehavior : MonoBehaviour {
     static float aasRadius = 5f;
     static string selfTag = "Subject";
     static string sensableTag = "Sensable Agent";
+    static string wallTag = "Wall";
 
     // Sensors available to the subject
     ArrayList sensors = new ArrayList();
@@ -33,6 +34,11 @@ public class SubjectBehavior : MonoBehaviour {
         sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius, 90, 90));
         sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius * 0.5f, 180, 90));
         sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius, 270, 90));
+        sensors.Add(new WallSensor(self, wallTag, 10.0f, 3));
+        sensors.Add(new WallSensor(self, wallTag, -10.0f, 3));
+        sensors.Add(new WallSensor(self, wallTag, 30.0f, 2));
+        sensors.Add(new WallSensor(self, wallTag, -30.0f, 2));
+        sensors.Add(new WallSensor(self, wallTag, 180.0f, 1));
         frame = 0;
 
         // Initialize speed at zero
