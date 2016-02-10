@@ -150,6 +150,7 @@ public class PieSliceSensor : Sensor {
             }
         }
 
+        //setting the activation level
         if (sensedObjects.Count == 0)
             activationLevel = Level.Zero;
         else if (sensedObjects.Count <= (int)Level.Low)
@@ -173,6 +174,7 @@ public class PieSliceSensor : Sensor {
         return direction % 360;
     }
     
+    //converts a vector to a more precise string
     private String VectorPrec(Vector3 v)
     {
         return "(" + v.x + "," + v.y + "," + v.z + ")";

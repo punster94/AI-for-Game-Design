@@ -6,6 +6,7 @@ public class AdjacentAgent : SensedObject {
     public double distance;
     public double relativeHeading; 
 
+    //The AdjacentAgent is a sensed object which has a relative heading, a distance to object, and an id.
     public AdjacentAgent(GameObject agent, Vector3 subjectHeading, Vector3 p, Vector3 subjectPosition) {
         distance = Vector3.Distance(p, subjectPosition);
 

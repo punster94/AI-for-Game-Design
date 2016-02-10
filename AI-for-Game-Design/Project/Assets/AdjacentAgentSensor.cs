@@ -13,6 +13,7 @@ public class AdjacentAgentSensor : Sensor {
         tooltip.transform.localScale = new Vector3(radius * 2, radius * 2);
     }
 
+    //senses nearby objects in range, returning the adjacent agents in an ArrayList
     public override ArrayList sense() {
         ArrayList potentiallySensedObjects = new ArrayList(sensableObjects()), adjacentAgents = new ArrayList();
         Vector3 op = ownerPosition();
@@ -28,10 +29,12 @@ public class AdjacentAgentSensor : Sensor {
         return adjacentAgents;
     }
 
+    //changes the position of the circle on the screen
     public override void drawTooltip() {
         tooltip.transform.position = ownerPosition();
     }
 
+    //takes in a list of sensedObjects that were sensed in a sense call and converts the object to a string.
     public override string toString(ArrayList sensedObjects) {
         string logMessage =  "Adjacent Agent Sensor on " + ownerName() + ": ";
         foreach(SensedObject sensedObj in sensedObjects)

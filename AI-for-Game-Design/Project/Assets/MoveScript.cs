@@ -1,6 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+// NOTE: This is the alternative move script which uses Unity Physics
+// to update the object. NOT USED CURRENTLY.
+// Kept in case we wish to enable sometime in future.
+
 public class MoveScript : MonoBehaviour {
     private KeyCode upKey = KeyCode.UpArrow;
     private KeyCode downKey = KeyCode.DownArrow;
@@ -50,7 +54,7 @@ public class MoveScript : MonoBehaviour {
             direction += directionSpeed;
         }
         
-        //this step might not be necessary, but done just in case.
+        //Clamps the direction between 0 and 2pi
         direction = ClampDirection(direction);
 
         subject.rotation = direction * Mathf.Rad2Deg;

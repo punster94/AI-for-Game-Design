@@ -88,6 +88,7 @@ public class SubjectBehavior : MonoBehaviour {
         transform.Rotate(Vector3.forward, direction * turnRate);
     }
 
+    //this allows us to update subject position based on current speed and acceleration.
     void repositionSubject() {
         if (Input.GetKey(KeyCode.W))
             currentSpeed += accelerationRate* transform.up * Time.deltaTime;
@@ -104,6 +105,7 @@ public class SubjectBehavior : MonoBehaviour {
         transform.position += currentSpeed* Time.deltaTime;
     }
     
+    //updates each sensor, and for now debug-prints the data produced.
     void sense() {
         Debug.Log("Subject at location: (" + self.transform.position.x + ", " + self.transform.position.y + ") and heading " + self.transform.rotation.eulerAngles.z);
         foreach(Sensor s in sensors) {
