@@ -4,6 +4,7 @@ using System.Collections;
 public abstract class Sensor {
     private GameObject owner;
     private string senseTag;
+    public bool Draw { get; set; }
 
     // a sensor has an owner and a senseTag.
     // Owner: object that has (owns) the sensor

@@ -4,7 +4,8 @@ using System.Collections;
 public class AdjacentAgent : SensedObject {
     public string id;
     public double distance;
-    public double relativeHeading; 
+    public double relativeHeading;
+    public readonly GameObject agentRef;
 
     //The AdjacentAgent is a sensed object which has a relative heading, a distance to object, and an id.
     public AdjacentAgent(GameObject agent, Vector3 subjectHeading, Vector3 p, Vector3 subjectPosition) {
@@ -19,6 +20,7 @@ public class AdjacentAgent : SensedObject {
         }
 
         id = agent.name;
+        agentRef = agent;
     }
 
     public override string toString() {
