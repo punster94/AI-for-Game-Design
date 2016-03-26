@@ -31,6 +31,9 @@ namespace Graph
         public double heuristicCost { get; set; }
         private int number;
         public int Number { get { return number; } }
+        private WalkState terrainType;
+        public WalkState TerrainType { get { return terrainType; } }
+        private float edgePenalty;
 
         /// <summary>
         /// Initializes the node for pathfinding.
@@ -59,6 +62,50 @@ namespace Graph
         /// </summary>
         static public readonly Color endColor = new Color(0, 1, 0, 0.5f);
 
+
+        public enum WalkState
+        {
+            Slippery, TableDef, Sandpaper, HotSquare, Unwalkable
+        }
+
+        private WalkState randWalkState()
+        {
+            float randVal = Random.value;
+            if (randVal < 0.05)
+                return WalkState.HotSquare;
+            if (randVal < 0.15)
+                return WalkState.Slippery;
+            if (randVal < 0.20)
+                return WalkState.Sandpaper;
+            if (randVal < 0.85)
+                return WalkState.TableDef;
+
+            return WalkState.Unwalkable;
+        }
+
+        /// <summary>
+        /// Returns the cost of a given WalkState, where Unwalkable = +inf.
+        /// </summary>
+        /// <param name="w">The walkstate to measure the cost of.</param>
+        /// <returns>Slippery = 0.5, TableDef = 1.0, Sandpaper = 1.5, HotSquare = 2.5, Unwalkable = pos inf</returns>
+        public float costOfWalkState(WalkState w)
+        {
+            switch (w)
+            {
+                case WalkState.Slippery:
+                    return 0.5f;
+                case WalkState.TableDef:
+                    return 1.0f;
+                case WalkState.Sandpaper:
+                    return 1.5f;
+                case WalkState.HotSquare:
+                    return 2.5f;
+                case WalkState.Unwalkable:
+                    return float.PositiveInfinity;
+            }
+            return float.PositiveInfinity;
+        }
+
         /// <summary>
         /// Constructs a Node.
         /// </summary>
@@ -73,6 +120,7 @@ namespace Graph
             pos = position;
             this.gridPos = gridPos;
             GameObject drawer = new GameObject("Node " + pos);
+            drawer.isStatic = true;
 
             //set sprite back in z, so it draws beneath everything.
             drawer.transform.position = new Vector3(position.x, position.y, 1);
@@ -82,9 +130,13 @@ namespace Graph
             drawer.tag = gameTag;
             // Draw a little bigger than scale.
             spriteDraw.transform.localScale = new Vector2(scale * 1.35f, scale * 1.35f);
-
+            
             // Draw with 50% alpha-white.
-            spriteDraw.color = defColor;
+            //spriteDraw.color = defColor;
+            terrainType = randWalkState();
+            edgePenalty = costOfWalkState(terrainType);
+            resetColor();
+            //spriteDraw.color = Random.ColorHSV(0.2f, 1.0f, 0.1f, 0.7f, 0.2f, 1.0f);
 
             CameFrom = null;
             number = num;
@@ -141,12 +193,52 @@ namespace Graph
             spriteDraw.color = c;
         }
 
+
+        /// <summary>
+        /// Color of the node. Debug mode.
+        /// </summary>
+        public Color getColor()
+        {
+            return spriteDraw.color;
+        }
+
+
+        /// <summary>
+        /// Resets color of the node to real color. Debug mode.
+        /// </summary>
+        public void resetColor()
+        {
+            switch (terrainType)
+            {
+                case WalkState.Slippery:
+                    spriteDraw.color = Color.blue;
+                    break;
+                case WalkState.TableDef:
+                    spriteDraw.color = Color.HSVToRGB(0.083333f, 1, 0.59f);
+                    break;
+                case WalkState.Sandpaper:
+                    spriteDraw.color = Color.HSVToRGB(0.083333f, 1, 0.30f);
+                    break;
+                case WalkState.HotSquare:
+                    spriteDraw.color = Color.red;
+                    break;
+                default:
+                    spriteDraw.color = Color.black;
+                    break;
+            }
+        }
+
         /// <summary>
         /// Adds an edge to this node.
         /// </summary>
         /// <param name="e">The edge to add.</param>
-        public void addEdge(Edge e)
+        private void addEdge(Edge e)
         {
+
+            if (e.getNode().TerrainType == WalkState.Unwalkable ||
+                            TerrainType == WalkState.Unwalkable)
+                return;
+
             if (edgeList.Count == maxEdges)
             {
                 string errmsg = "tried to add more than " + maxEdges + " edges! " + ToString() + e.getNode().ToString() + "\n";
@@ -188,8 +280,13 @@ namespace Graph
         /// <param name="weight">The weight for the edge, default value is 1.</param>
         public void addBidirEdge(Node other, float weight = 1)
         {
-            this.addEdge(new Edge(other, weight));
-            other.addEdge(new Edge(this, weight));
+            //helps w/diagonal movement.
+            //float avgPen = (other.edgePenalty + this.edgePenalty) / 2.0f;
+            //this.addEdge(new Edge(other, weight * avgPen));
+            //other.addEdge(new Edge(this, weight * avgPen));
+
+            this.addEdge(new Edge(other, weight * other.edgePenalty));
+            other.addEdge(new Edge(this, weight * this.edgePenalty));
         }
 
         /// <summary>
@@ -238,6 +335,8 @@ namespace Graph
         /// </summary>
         public void destroyThisNode()
         {
+            //Just in case it isn't destroyed right now, make it invisible.
+            Visible = false;
             Object.Destroy(spriteDraw.gameObject);
 
 #if DEBUG_NODE_TEXT
