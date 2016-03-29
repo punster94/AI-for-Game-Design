@@ -57,7 +57,7 @@ public class PieSliceSensor : Sensor {
     private void InitLineRenderer()
     {
         //since objects can only have one line renderer, we have to add an object to hold a new line renderer.
-        lineDrawer = new GameObject();
+        lineDrawer = new GameObject("PieSlice Sensor @ " + relativeDirection * Mathf.Rad2Deg);
         
         lineRenderer = lineDrawer.AddComponent<LineRenderer>();
         lineRenderer.SetVertexCount(drawAbility + 1);
@@ -70,40 +70,48 @@ public class PieSliceSensor : Sensor {
     //draws the pie using lines.
     public override void drawTooltip()
     {
-        //first get the owner position, so we can do local space.
-        Vector3 pos = owner.transform.position;
-        lineRenderer.SetPosition(0, pos);
-
-        //this controls where our initial direction goes, and how many radian increments between line segements.
-        float startDirection = GetLocalDirectionRadians() - sweepRadiusRadians;
-        float incrementDirection = sweepRadiusRadians * 2.0f / (drawAbility - 2);
-
-        //draw the circle portion of the arc.
-        for (int i = 1; i < drawAbility; i++)
+        if (Draw)
         {
-            float circleDir = startDirection + incrementDirection * (i - 1);
-            Vector3 circlePos = pos + new Vector3(Mathf.Cos(circleDir) * radius,
-                                                  Mathf.Sin(circleDir) * radius);
-            lineRenderer.SetPosition(i, circlePos);
-        }
-        //draw final line for ending.
-        lineRenderer.SetPosition(drawAbility, pos);
+            lineRenderer.enabled = true;
+            //first get the owner position, so we can do local space.
+            Vector3 pos = owner.transform.position;
+            lineRenderer.SetPosition(0, pos);
 
-        //set the color according to activation level.
-        if (activationLevel <= Level.Low)
-        {
-            lineRenderer.material.color = Color.white;
-            lineRenderer.SetColors(Color.white, Color.white);
-        }
-        else if (activationLevel == Level.Med)
-        {
-            lineRenderer.material.color = Color.blue;
-            lineRenderer.SetColors(Color.blue, Color.blue);
+            //this controls where our initial direction goes, and how many radian increments between line segements.
+            float startDirection = GetLocalDirectionRadians() - sweepRadiusRadians;
+            float incrementDirection = sweepRadiusRadians * 2.0f / (drawAbility - 2);
+
+            //draw the circle portion of the arc.
+            for (int i = 1; i < drawAbility; i++)
+            {
+                float circleDir = startDirection + incrementDirection * (i - 1);
+                Vector3 circlePos = pos + new Vector3(Mathf.Cos(circleDir) * radius,
+                                                      Mathf.Sin(circleDir) * radius);
+                lineRenderer.SetPosition(i, circlePos);
+            }
+            //draw final line for ending.
+            lineRenderer.SetPosition(drawAbility, pos);
+
+            //set the color according to activation level.
+            if (activationLevel <= Level.Low)
+            {
+                lineRenderer.material.color = Color.white;
+                lineRenderer.SetColors(Color.white, Color.white);
+            }
+            else if (activationLevel == Level.Med)
+            {
+                lineRenderer.material.color = Color.blue;
+                lineRenderer.SetColors(Color.blue, Color.blue);
+            }
+            else
+            {
+                lineRenderer.material.color = Color.red;
+                lineRenderer.SetColors(Color.red, Color.red);
+            }
         }
         else
         {
-            lineRenderer.material.color = Color.red;
-            lineRenderer.SetColors(Color.red, Color.red);
+            lineRenderer.enabled = false;
         }
 
         return;

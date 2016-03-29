@@ -4,13 +4,18 @@ using System;
 
 public class AdjacentAgentSensor : Sensor {
     private float radius;
-    private static string tooltipTag = "Adjacent Agent Sensor Tooltip";
-    private GameObject tooltip;
+    GameObject imgObj;
+    SpriteRenderer drawer;
 
     public AdjacentAgentSensor(GameObject o, string st, float r) : base(o, st) {
         radius = r;
-        tooltip = GameObject.Find(tooltipTag);
-        tooltip.transform.localScale = new Vector3(radius * 2, radius * 2);
+        
+        Sprite nodeImg = Resources.Load<Sprite>("Static Agent");
+        imgObj = new GameObject("AdjacentAgent Sensor");
+        drawer = imgObj.AddComponent<SpriteRenderer>();
+        drawer.sprite = nodeImg;
+        drawer.color = new Color(1, 0, 0, 0.25f);
+        drawer.transform.localScale = new Vector3(radius * 2, radius * 2);
     }
 
     //senses nearby objects in range, returning the adjacent agents in an ArrayList
@@ -30,8 +35,15 @@ public class AdjacentAgentSensor : Sensor {
     }
 
     //changes the position of the circle on the screen
-    public override void drawTooltip() {
-        tooltip.transform.position = ownerPosition();
+    public override void drawTooltip()
+    {
+        if (Draw)
+        {
+            drawer.enabled = true;
+            imgObj.transform.position = ownerPosition();
+        }
+        else
+            drawer.enabled = false;
     }
 
     //takes in a list of sensedObjects that were sensed in a sense call and converts the object to a string.
