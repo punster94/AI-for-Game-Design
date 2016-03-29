@@ -2,6 +2,7 @@
 //#define DEBUG_PATHFINDER_DRAWDEBUG  // draws debug paths and shows start/end nodes.
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 namespace Graph
 {
@@ -75,10 +76,100 @@ namespace Graph
         /// Returns a sorted list of nodes within a given endurance value.
         /// Performs a Dijkstra-like algorithm.
         /// </summary>
+        /// <param name="satifies">The predicate each node must follow.</param>
         /// <param name="endurance">The maximum endurance to follow out.</param>
         /// <returns>A sorted list of nodes within a given endurance value.</returns>
-        public List<Node> nodesWithinEnduranceValue(Node startNode, float endurance = 8.0f)
+        public List<Node> nodesThatSatisfyPred(Node startNode, Predicate<Node> satifies, float endurance = 16.0f)
         {
+            List<Node> foundNodes = new List<Node>();
+            MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
+
+            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
+            foreach (Node[] arr in nodeArr)
+                foreach (Node p in arr)
+                    if (p != null)
+                    {
+                        p.initPathfinding();
+                    }
+
+            startNode.realCost = 0;
+            nodeList.Enqueue(startNode, startNode.realCost);
+
+
+            string encountered = "";
+            string nodes = "";
+            nodes += "Start node " + startNode.Number + "\n";
+            encountered += "Start node " + startNode.Number + "\n";
+            encountered += "endurance = " + endurance + "\n";
+
+            while (nodeList.Count > 0)
+            {
+                //Pick the best looking node, by f-value.
+                Node best = nodeList.Dequeue();
+                double bestDist = best.realCost;
+
+                encountered += "Node " + best.Number + " " + best.ToString() + "\n";
+                nodes += "Node " + best.Number + "\n";
+
+                best.Visited = true;
+
+                if (satifies(best))
+                    foundNodes.Add(best);
+
+                //string updateString = "updating: ";
+                foreach (Edge e in best.getEdges())
+                {
+                    Node other = e.getNode();
+
+                    //We already visited this node, move along,
+                    if (other.Visited)
+                        continue;
+
+                    //Tentative distance.
+                    double testDist = e.getWeight() + bestDist;
+
+                    if (testDist > endurance)
+                        continue;
+
+                    //If the other node isn't in the priority queue, add it.
+                    if (!nodeList.Contains(other))
+                    {
+                        other.CameFrom = best;
+                        other.realCost = testDist;
+                        nodeList.Enqueue(other, other.realCost);
+                        encountered += "   added " + other.Number
+                            + ", total estimated cost "
+                            + (other.realCost) + "\n";
+                        continue;
+                    }
+                    //If the other node was a bad path, and this one's better, replace it.
+                    else if (other.realCost > testDist)
+                    {
+                        other.CameFrom = best;
+                        other.realCost = testDist;
+                        nodeList.Update(other, other.realCost);
+                        encountered += "   updated " + other.Number
+                            + ", total new estimated cost "
+                            + (other.realCost) + "\n";
+                    }
+                }
+            }
+            Debug.Log(encountered);
+            Debug.Log(nodes);
+
+            return foundNodes;
+        }
+
+        /// <summary>
+        /// Returns a sorted list of nodes within a given endurance value.
+        /// Performs a Dijkstra-like algorithm.
+        /// </summary>
+        /// <param name="endurance">The maximum endurance to follow out.</param>
+        /// <returns>A sorted list of nodes within a given endurance value.</returns>
+        public List<Node> nodesWithinEnduranceValue(Node startNode, float endurance = 16.0f)
+        {
+            //for future reference, less code copy-paste worth negligible performance reduction.
+            //return nodesThatSatisfyPred(startNode, (_) => true, endurance);
             List<Node> foundNodes = new List<Node>();
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
@@ -226,6 +317,9 @@ namespace Graph
             {
                 return closest;
             }
+            // Since no node is null now, we can remove the rest.
+
+#if DEBUG_PATHFINDER_UPDATELOOP
             // We've failed to find the closest node on the first try.
             // Try to avoid looking through graph by looking at the nearest four nodes.
 
@@ -295,7 +389,7 @@ namespace Graph
                         minDist = Vector2.SqrMagnitude(loc - a.getPos());
                     }
                 }
-
+#endif
             return closest;
         }
 
@@ -384,7 +478,7 @@ namespace Graph
                     {
                         p.initPathfinding();
                     }
-            System.Func<Node, Node, float> Heuristic;
+            Func<Node, Node, float> Heuristic;
             if (allowedPaths == Paths.quadDir)
                 Heuristic = ManhattenHeuristic;
             else if (allowedPaths == Paths.octDir)
@@ -516,6 +610,80 @@ namespace Graph
 
         GameObject pathDrawer = null;
 
+        public List<Node> NodesInRangeOfNodes(List<Node> listNodes, int minDist, int maxDist)
+        {
+            HashSet<Node> inRange = new HashSet<Node>();
+
+            foreach (Node n in listNodes)
+                nodesInRangeOfNode(inRange, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
+
+            List<Node> listOfNodes = new List<Node>();
+            listOfNodes.AddRange(inRange);
+            return listOfNodes;
+        }
+
+        private void nodesInRangeOfNode(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0 && nodeArr[y][x].isWalkable())
+                inRange.Add(nodeArr[y][x]);
+            
+            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeUp(inRange, x, y - 1, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeDown(inRange, x, y + 1, minDist - 1, maxDist - 1);
+        }
+
+        private void nodesInRangeOfNodeLeft(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0 && nodeArr[y][x].isWalkable())
+                inRange.Add(nodeArr[y][x]);
+
+            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
+        }
+
+
+        private void nodesInRangeOfNodeRight(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0 && nodeArr[y][x].isWalkable())
+                inRange.Add(nodeArr[y][x]);
+
+            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
+        }
+
+        private void nodesInRangeOfNodeUp(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0 && nodeArr[y][x].isWalkable())
+                inRange.Add(nodeArr[y][x]);
+
+            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeUp(inRange, x, y - 1, minDist - 1, maxDist - 1);
+        }
+
+        private void nodesInRangeOfNodeDown(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0 && nodeArr[y][x].isWalkable())
+                inRange.Add(nodeArr[y][x]);
+
+            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
+            nodesInRangeOfNodeDown(inRange, x, y + 1, minDist - 1, maxDist - 1);
+        }
         /// <summary>
         /// The graph has a update function, for showing off pathfinding
         /// without using the subject as a starting node.
@@ -534,72 +702,37 @@ namespace Graph
 
                 overlayNodes.Clear();
 
-                foreach (Node n in nodesWithinEnduranceValue(closestMostValidNode(getMousePos()), 8))
+                List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(getMousePos()), 8);
+                List<Node> range = NodesInRangeOfNodes(reach, 2, 3);
+
+                //HACK: DOESN'T WORK!
+                HashSet<Node> inReach = new HashSet<Node>();
+                inReach.UnionWith(reach);
+                HashSet<Node> inRange = new HashSet<Node>();
+                inRange.UnionWith(range);
+                inRange.RemoveWhere(inReach.Contains);
+
+                foreach (Node n in reach)
                 {
                     //make slightly smaller to show square off
-                    Node q = new Node(nodeImg, n.getPos(), n.getGridPos(), radii * 1.75f);
+                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), radii * 1.75f);
                     q.setColor(new Color(0, 0.5f, 0, 0.75f));
+                    
+                    overlayNodes.Add(q);
+                }
+
+
+                foreach (Node n in inRange)
+                {
+                    //make slightly smaller to show square off
+                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), radii * 1.75f);
+                    q.setColor(new Color(0, 0, 0.5f, 0.75f));
 
                     overlayNodes.Add(q);
                 }
             }
-#if DEBUG_PATHFINDER_UPDATELOOP
-            if (Input.GetKeyDown("y"))
-            {
-                //Build start node.
-                if (manualStartNode == null)
-                {
-                    manualStartNode = closestMostValidNode(getMousePos());
-                    manualStartNode.setColor(Node.startColor);
-                }
-                //Build end node, show path.
-                else if (manualEndNode == null)
-                {
-                    manualEndNode = closestMostValidNode(getMousePos());
-                    Queue<Node> Path = new Queue<Node>();
-                    AStar(Path, manualStartNode, manualEndNode);
-                    ShowPath(Path);
-                }
-                //Path showing, stop showing it.
-                else
-                {
-                    manualStartNode.setColor(Node.defColor);
-                    manualEndNode.setColor(Node.defColor);
-                    manualEndNode = manualStartNode = null;
-                    UnityEngine.Object.Destroy(pathDrawer);
-                    pathDrawer = null;
-                }
-            }
-
-            if (isAutoRepairing && !graphCheckingRunning)
-                StartCoroutine(CheckGraphRow());
-#endif
-            }
-
-
-#if DEBUG_PATHFINDER_UPDATELOOP
-        private readonly bool isAutoRepairing = true;
-        private bool graphCheckingRunning = false;
-
-        System.Collections.IEnumerator CheckGraphRow()
-        {
-            graphCheckingRunning = true;
-            for (int y = 0; y < numYNodes; y++)
-            {
-                for (int x = 0; x < numXNodes; x++)
-                {
-                    if (nodeArr[y][x] != null
-                        && Physics2D.OverlapCircle(nodeArr[y][x].getPos(), radii, LAYER_FILTER_MASK))
-                        onlineRecreateGraph();
-                    else if (nodeArr[y][x] == null
-                        && !Physics2D.OverlapCircle(ArrPosToWorldSpace(new IntVec2(x, y)), radii, LAYER_FILTER_MASK))
-                        onlineRecreateGraph();
-                }
-                yield return null;
-            }
-            graphCheckingRunning = false;
         }
-#endif
+        
 
         private Vector2 getMousePos()
         {
@@ -665,9 +798,12 @@ namespace Graph
                 {
                     IntVec2 arrPos = new IntVec2(x, y);
                     Vector2 newPosV2 = ArrPosToWorldSpace(arrPos);
+
+#if DEBUG_PATHFINDER_UPDATELOOP
                     if (!Physics2D.OverlapCircle(newPosV2, radii, LAYER_FILTER_MASK))
+#endif
                     {
-                        nodeArr[y][x] = new Node(nodeImg, newPosV2, arrPos, radii * 2, numValidNodes++);
+                        nodeArr[y][x] = new Node(transform.gameObject, nodeImg, newPosV2, arrPos, radii * 2, numValidNodes++);
 
                         //add up-left edge (inverse y)
                         if (allowedPaths > Paths.quadDir)
@@ -696,130 +832,10 @@ namespace Graph
                 }
             }
         }
-        
-        /// <summary>
-        /// Helper for floodFill.
-        /// </summary>
-        /// <param name="seedPos">Where to start seeding from.</param>
-        private void floodFill(Vector2 seedPos)
-        {
-            IntVec2 startPos = WorldSpaceToArrPos(seedPos);
-            floodFill(startPos);
-        }
 
         private const float sqrt2 = 1.41421356237f;
 
-        /// <summary>
-        /// Classic floodfill algorithm.
-        /// Has problems with stack overflows.
-        /// Checks diagnonals, too.
-        /// </summary>
-        /// <param name="startPos">The current seed.</param>
-        private void floodFill(IntVec2 startPos)
-        {
-            Node thisNode = new Node(nodeImg, ArrPosToWorldSpace(startPos), startPos, radii * 2, numValidNodes++);
-            nodeArr[startPos.y][startPos.x] = thisNode;
-
-            // Straight sections, weight 1: Right-Left, Up-Down sections.
-
-            // Check right
-            // Check for validity, and if so, either add connection or recurse and add later.
-            if (startPos.x + 1 < numXNodes
-                && isOkayToFloodUDLR(startPos, IntVec2.right, (Vector2)IntVec2.up))
-            {
-                floodDown(thisNode, startPos + IntVec2.right);
-            }
-
-            // Check left
-            if (startPos.x - 1 >= 0
-                && isOkayToFloodUDLR(startPos, IntVec2.left, (Vector2)IntVec2.up))
-            {
-                floodDown(thisNode, startPos + IntVec2.left);
-            }
-
-            // Check down (inverse coords!)
-            if (startPos.y + 1 < numYNodes
-                && isOkayToFloodUDLR(startPos, IntVec2.up, (Vector2)IntVec2.right))
-            {
-                floodDown(thisNode, startPos + IntVec2.up);
-            }
-
-            // Check up (inverse coords!)
-            if (startPos.y - 1 >= 0
-                && isOkayToFloodUDLR(startPos, IntVec2.down, (Vector2)IntVec2.right))
-            {
-                floodDown(thisNode, startPos + IntVec2.down);
-            }
-
-            // Check Diagonels: weighted at sqrt2.
-
-            if (allowedPaths > Paths.quadDir)
-            {
-                //up-right
-                // Check for validity, and if so, either add connection or recurse and add later.
-                if (startPos.x + 1 < numXNodes
-                    && startPos.y - 1 >= 0
-                    && isOkayToFloodDiag(startPos, IntVec2.down, IntVec2.right))
-                {
-                    floodDown(thisNode, startPos + IntVec2.down_right, sqrt2);
-                }
-
-                //up-left
-                if (startPos.x - 1 >= 0
-                    && startPos.y - 1 >= 0
-                    && isOkayToFloodDiag(startPos, IntVec2.down, IntVec2.left))
-                {
-                    floodDown(thisNode, startPos + IntVec2.down_left, sqrt2);
-                }
-
-                //down-right
-                if (startPos.x + 1 < numXNodes
-                    && startPos.y + 1 < numYNodes
-                    && isOkayToFloodDiag(startPos, IntVec2.up, IntVec2.right))
-                {
-                    floodDown(thisNode, startPos + IntVec2.up_right, sqrt2);
-                }
-
-                //down-left
-                if (startPos.x - 1 >= 0
-                    && startPos.y + 1 < numYNodes
-                    && isOkayToFloodDiag(startPos, IntVec2.up, IntVec2.left))
-                {
-                    floodDown(thisNode, startPos + IntVec2.up_left, sqrt2);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Returns whether a given position is free or not.
-        /// </summary>
-        /// <param name="pos">The position to check.</param>
-        /// <returns>True, if free, false if occupied</returns>
-        private bool isFree(IntVec2 pos)
-        {
-            return nodeArr[pos.y][pos.x] == null;
-        }
-
-        /// <summary>
-        /// Will flood to a position if possible,
-        /// or add a connection to it if already made.
-        /// </summary>
-        /// <param name="curNode"></param>
-        /// <param name="recurseTo"></param>
-        /// <param name="weight"></param>
-        private void floodDown(Node curNode, IntVec2 recurseTo, float weight = 1.0f)
-        {
-            if (isFree(recurseTo))
-            {
-                floodFill(recurseTo);
-                curNode.addEdge(nodeArr[recurseTo.y][recurseTo.x], weight);
-            }
-            else
-            {
-                curNode.addEdge(nodeArr[recurseTo.y][recurseTo.x], weight);
-            }
-        }
-
+#if DEBUG_PATHFINDER_UPDATELOOP
         /// <summary>
         /// Helper function for floodfill. Does extra checks / physics checks to see if we can add a node in the specified location.
         /// </summary>
@@ -853,6 +869,23 @@ namespace Graph
                  && !Physics2D.Linecast(oldPosV2 + orthAngle * radii, newPosV2 + orthAngle * radii, LAYER_FILTER_MASK)
                  && !Physics2D.Linecast(oldPosV2 - orthAngle * radii, newPosV2 - orthAngle * radii, LAYER_FILTER_MASK));
         }
+#else
+        /// <summary>
+        /// null helper function for floodfill.
+        /// Returns true.
+        /// </summary>
+        /// <returns>true!</returns>
+        private bool isOkayToFloodUDLR(IntVec2 startPos, IntVec2 direction, Vector2 orthAngle)
+        {
+            return true;
+        }
+
+        // Same, but with diagonals.
+        private bool isOkayToFloodDiag(IntVec2 startPos, IntVec2 dir1, IntVec2 dir2)
+        {
+            return true;
+        }
+#endif
 
         /// <summary>
         /// Converts a world space location to an array position.

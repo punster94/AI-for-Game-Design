@@ -31,8 +31,9 @@ namespace Graph
         public double heuristicCost { get; set; }
         private int number;
         public int Number { get { return number; } }
-        private WalkState terrainType;
-        public WalkState TerrainType { get { return terrainType; } }
+        public bool Occupied { get; set; }
+        private SquareType terrainType;
+        public SquareType TerrainType { get { return terrainType; } }
         private float edgePenalty;
 
         /// <summary>
@@ -40,7 +41,7 @@ namespace Graph
         /// </summary>
         public void initPathfinding()
         {
-            Visited = false;
+            Visited = Occupied;
             CameFrom = null;
             realCost = double.PositiveInfinity;
             heuristicCost = double.PositiveInfinity;
@@ -63,44 +64,46 @@ namespace Graph
         static public readonly Color endColor = new Color(0, 1, 0, 0.5f);
 
 
-        public enum WalkState
+        public enum SquareType
         {
-            Slippery, TableDef, Sandpaper, HotSquare, Unwalkable
+            Slippery, TableDef, Sandpaper, Unwalkable
         }
 
-        private WalkState randWalkState()
+        private SquareType randWalkState()
         {
             float randVal = Random.value;
-            if (randVal < 0.05)
-                return WalkState.HotSquare;
+            if (randVal < 0.10)
+                return SquareType.Slippery;
             if (randVal < 0.15)
-                return WalkState.Slippery;
-            if (randVal < 0.20)
-                return WalkState.Sandpaper;
+                return SquareType.Sandpaper;
             if (randVal < 0.85)
-                return WalkState.TableDef;
+                return SquareType.TableDef;
 
-            return WalkState.Unwalkable;
+            return SquareType.Unwalkable;
+        }
+
+        public bool isWalkable()
+        {
+            return terrainType != SquareType.Unwalkable;
         }
 
         /// <summary>
         /// Returns the cost of a given WalkState, where Unwalkable = +inf.
+        /// Must be >= 1, to preserve Manhatten Distance Heuristic
         /// </summary>
         /// <param name="w">The walkstate to measure the cost of.</param>
-        /// <returns>Slippery = 0.5, TableDef = 1.0, Sandpaper = 1.5, HotSquare = 2.5, Unwalkable = pos inf</returns>
-        public float costOfWalkState(WalkState w)
+        /// <returns>Slippery = 1.0, TableDef = 2.0, Sandpaper = 3.0, HotSquare = 5.0, Unwalkable = pos inf</returns>
+        public float costOfWalkState(SquareType w)
         {
             switch (w)
             {
-                case WalkState.Slippery:
-                    return 0.5f;
-                case WalkState.TableDef:
+                case SquareType.Slippery:
                     return 1.0f;
-                case WalkState.Sandpaper:
-                    return 1.5f;
-                case WalkState.HotSquare:
-                    return 2.5f;
-                case WalkState.Unwalkable:
+                case SquareType.TableDef:
+                    return 2.0f;
+                case SquareType.Sandpaper:
+                    return 3.0f; 
+                case SquareType.Unwalkable:
                     return float.PositiveInfinity;
             }
             return float.PositiveInfinity;
@@ -115,12 +118,13 @@ namespace Graph
         /// <param name="scale">The node's visible scale.</param>
         /// <param name="num">The node's internal number.</param>
         /// <param name="vis">Whether the node is visible or not. Default is false.</param>
-        public Node(Sprite floorImg, Vector2 position, IntVec2 gridPos, float scale = 0.75f, int num = 0, bool vis = true)
+        public Node(GameObject parent, Sprite floorImg, Vector2 position, IntVec2 gridPos, float scale = 0.75f, int num = 0, bool vis = true)
         {
             pos = position;
             this.gridPos = gridPos;
             GameObject drawer = new GameObject("Node " + pos);
             drawer.isStatic = true;
+            drawer.transform.parent = parent.transform;
 
             //set sprite back in z, so it draws beneath everything.
             drawer.transform.position = new Vector3(position.x, position.y, 1);
@@ -139,6 +143,7 @@ namespace Graph
             //spriteDraw.color = Random.ColorHSV(0.2f, 1.0f, 0.1f, 0.7f, 0.2f, 1.0f);
 
             CameFrom = null;
+            Occupied = false;
             number = num;
 
 #if DEBUG_NODE_EDGES
@@ -210,17 +215,14 @@ namespace Graph
         {
             switch (terrainType)
             {
-                case WalkState.Slippery:
+                case SquareType.Slippery:
                     spriteDraw.color = Color.blue;
                     break;
-                case WalkState.TableDef:
+                case SquareType.TableDef:
                     spriteDraw.color = Color.HSVToRGB(0.083333f, 1, 0.59f);
                     break;
-                case WalkState.Sandpaper:
+                case SquareType.Sandpaper:
                     spriteDraw.color = Color.HSVToRGB(0.083333f, 1, 0.30f);
-                    break;
-                case WalkState.HotSquare:
-                    spriteDraw.color = Color.red;
                     break;
                 default:
                     spriteDraw.color = Color.black;
@@ -235,8 +237,8 @@ namespace Graph
         private void addEdge(Edge e)
         {
 
-            if (e.getNode().TerrainType == WalkState.Unwalkable ||
-                            TerrainType == WalkState.Unwalkable)
+            if (e.getNode().TerrainType == SquareType.Unwalkable ||
+                            TerrainType == SquareType.Unwalkable)
                 return;
 
             if (edgeList.Count == maxEdges)
