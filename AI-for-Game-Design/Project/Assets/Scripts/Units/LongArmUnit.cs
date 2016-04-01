@@ -5,8 +5,20 @@ public class LongArmUnit : Unit {
 
 	public static int framesInAnimation = 4;
 
+	Sprite sprite = Resources.Load<Sprite>("LongArm");
+
 	// Constructs a LongArmUnit given the GameObject it will relate to (remember, LongArmUnit and Unit are still both MonoBehavior classes)
-	public LongArmUnit(GameObject g) : base(10, 6, 6, 3, 1, 2, g){}
+	public LongArmUnit(GameObject parent, string name, int x, int y, bool isEnemy) : base(10, 6, 6, 3, 1, 2, x, y){
+		GameObject g = new GameObject(name);
+		g.transform.parent = parent.transform;
+		g.transform.position = new Vector3((float) x, (float) y);
+		g.AddComponent<SpriteRenderer>();
+		g.GetComponent<SpriteRenderer>().sprite = sprite;
+		setSpriteObject(g);
+
+		if(isEnemy)
+			g.GetComponent<SpriteRenderer>().color = new Color(200f, 0f, 0f);
+	}
 
 
 	public void die() {

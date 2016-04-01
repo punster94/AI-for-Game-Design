@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public abstract class Unit : MonoBehaviour {
+public abstract class Unit {
 	// Fields for animation control
 	public GameObject spriteObject;
 	public int ticks;
@@ -20,8 +20,10 @@ public abstract class Unit : MonoBehaviour {
 	private int minAttackRange;
 	private int maxAttackRange;
 
-	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, GameObject g) {
-		spriteObject = g;
+	private int xPos;
+	private int yPos;
+
+	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, int x, int y) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
 		bendiness = bendinessFactor;
@@ -59,6 +61,10 @@ public abstract class Unit : MonoBehaviour {
 		return maxAttackRange;
 	}
 
+	public void setSpriteObject(GameObject g) {
+		spriteObject = g;
+	}
+
 	// Takes the attack from an enemy unit, returning a list of attack results
 	public ArrayList takeAttackFrom(Unit enemy, int distance, bool firstAttack = true) {
 		Attack atk = new Attack(enemy, this);
@@ -94,24 +100,4 @@ public abstract class Unit : MonoBehaviour {
 	public ArrayList attack(Unit enemy, int distance) {
 		return enemy.takeAttackFrom(this, distance);
 	}
-
-	// Initializes tickers for animations and timimg
-	void Start() {
-		ticks = 0;
-		animationFrame = 0;
-	}
-
-	// Generic update for updating animation of the given unit (may need to be moved to each individual unit type)
-	void Update() {
-		ticks %= ticksPerAnimation;
-
-		// If it is time to change the units animation frame
-		if(currentlySelected && ticks == 0) {
-			updateAnimation();
-		}
-
-		ticks += 1;
-	}
-
-	private abstract void updateAnimation();
 }
