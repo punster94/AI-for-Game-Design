@@ -102,7 +102,7 @@ namespace Graph
                 case SquareType.TableDef:
                     return 2.0f;
                 case SquareType.Sandpaper:
-                    return 3.0f; 
+                    return 7.0f; 
                 case SquareType.Unwalkable:
                     return float.PositiveInfinity;
             }

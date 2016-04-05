@@ -26,7 +26,7 @@ public class SubjectBehavior : MonoBehaviour {
     Vector3 currentSpeed;
 
     // Physics properties
-    static float maxSpeed = 12f;
+    static float maxSpeed = 1f;
     static float accelerationRate = 10f;
     static float frictionRate = 0.95f;
     static float backRate = 6f;

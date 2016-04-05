@@ -1,8 +1,10 @@
 ﻿//#define DEBUG_PATHFINDER_UPDATELOOP // allows graph to auto-update w/physics, display manual paths.
 //#define DEBUG_PATHFINDER_DRAWDEBUG  // draws debug paths and shows start/end nodes.
+//#define DEBUG_PATHFINDER_LOGDEBUG   // sends pathfinding debug to debug. SIGNIFICANT PERFORMANCE IMPACT!
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using System.Text;
 
 namespace Graph
 {
@@ -95,21 +97,24 @@ namespace Graph
             startNode.realCost = 0;
             nodeList.Enqueue(startNode, startNode.realCost);
 
-
-            string encountered = "";
-            string nodes = "";
-            nodes += "Start node " + startNode.Number + "\n";
-            encountered += "Start node " + startNode.Number + "\n";
-            encountered += "endurance = " + endurance + "\n";
+#if DEBUG_PATHFINDER_LOGDEBUG
+            StringBuilder encountered = new StringBuilder();
+            StringBuilder nodes = new StringBuilder();
+            nodes.Append("Start node ").Append(startNode.Number).AppendLine();
+            encountered.Append("Start node ").Append(startNode.Number).AppendLine();
+            encountered.Append("endurance = ").Append(endurance).AppendLine();
+#endif
 
             while (nodeList.Count > 0)
             {
                 //Pick the best looking node, by f-value.
                 Node best = nodeList.Dequeue();
                 double bestDist = best.realCost;
-
-                encountered += "Node " + best.Number + " " + best.ToString() + "\n";
-                nodes += "Node " + best.Number + "\n";
+                
+#if DEBUG_PATHFINDER_LOGDEBUG
+                encountered.Append("Node ").Append(best.Number).Append(" ").Append(best).AppendLine();
+                nodes.Append("Node ").Append(best.Number).AppendLine();
+#endif
 
                 best.Visited = true;
 
@@ -137,9 +142,12 @@ namespace Graph
                         other.CameFrom = best;
                         other.realCost = testDist;
                         nodeList.Enqueue(other, other.realCost);
-                        encountered += "   added " + other.Number
-                            + ", total estimated cost "
-                            + (other.realCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   added ").Append(other.Number)
+                                   .Append(", total estimated cost ")
+                                   .Append(other.realCost).AppendLine();
+#endif
                         continue;
                     }
                     //If the other node was a bad path, and this one's better, replace it.
@@ -148,14 +156,19 @@ namespace Graph
                         other.CameFrom = best;
                         other.realCost = testDist;
                         nodeList.Update(other, other.realCost);
-                        encountered += "   updated " + other.Number
-                            + ", total new estimated cost "
-                            + (other.realCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   updated ").Append(other.Number)
+                                   .Append(", total new estimated cost ")
+                                   .Append(other.realCost).AppendLine();
+#endif
                     }
                 }
             }
+#if DEBUG_PATHFINDER_LOGDEBUG
             Debug.Log(encountered);
             Debug.Log(nodes);
+#endif
 
             return foundNodes;
         }
@@ -184,12 +197,13 @@ namespace Graph
             startNode.realCost = 0;
             nodeList.Enqueue(startNode, startNode.realCost);
 
-
-            string encountered = "";
-            string nodes = "";
-            nodes += "Start node " + startNode.Number + "\n";
-            encountered += "Start node " + startNode.Number + "\n";
-            encountered += "endurance = " + endurance + "\n";
+#if DEBUG_PATHFINDER_LOGDEBUG
+            StringBuilder encountered = new StringBuilder();
+            StringBuilder nodes = new StringBuilder();
+            nodes.Append("Start node ").Append(startNode.Number).AppendLine();
+            encountered.Append("Start node ").Append(startNode.Number).AppendLine();
+            encountered.Append("endurance = ").Append(endurance).AppendLine();
+#endif
 
             while (nodeList.Count > 0)
             {
@@ -197,9 +211,11 @@ namespace Graph
                 Node best = nodeList.Dequeue();
                 double bestDist = best.realCost;
 
-                encountered += "Node " + best.Number + " " + best.ToString() + "\n";
-                nodes += "Node " + best.Number + "\n";
-                
+#if DEBUG_PATHFINDER_LOGDEBUG
+                encountered.Append("Node ").Append(best.Number).Append(" ").Append(best).AppendLine();
+                nodes.Append("Node ").Append(best.Number).AppendLine();
+#endif
+
                 best.Visited = true;
                 foundNodes.Add(best);
 
@@ -224,9 +240,12 @@ namespace Graph
                         other.CameFrom = best;
                         other.realCost = testDist;
                         nodeList.Enqueue(other, other.realCost);
-                        encountered += "   added " + other.Number
-                            + ", total estimated cost "
-                            + (other.realCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   added ").Append(other.Number)
+                                   .Append(", total estimated cost ")
+                                   .Append(other.realCost).AppendLine();
+#endif
                         continue;
                     }
                     //If the other node was a bad path, and this one's better, replace it.
@@ -235,14 +254,19 @@ namespace Graph
                         other.CameFrom = best;
                         other.realCost = testDist;
                         nodeList.Update(other, other.realCost);
-                        encountered += "   updated " + other.Number
-                            + ", total new estimated cost "
-                            + (other.realCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   updated ").Append(other.Number)
+                                   .Append(", total new estimated cost ")
+                                   .Append(other.realCost).AppendLine();
+#endif
                     }
                 }
             }
+#if DEBUG_PATHFINDER_LOGDEBUG
             Debug.Log(encountered);
             Debug.Log(nodes);
+#endif
 
             return foundNodes;
         }
@@ -491,12 +515,14 @@ namespace Graph
             start.realCost = 0;
             nodeList.Enqueue(start, start.heuristicCost);
 
-            string encountered = "";
-            string nodes = "";
-            nodes += "Start node " + start.Number + "\n";
-            encountered += "Start node " + start.Number + "\n";
-            nodes += "End node " + end.Number + "\n";
-            encountered += "End node " + end.Number + "\n";
+#if DEBUG_PATHFINDER_LOGDEBUG
+            StringBuilder encountered = new StringBuilder();
+            StringBuilder nodes = new StringBuilder();
+            nodes.Append("Start node ").Append(start.Number).AppendLine();
+            encountered.Append("Start node ").Append(start.Number).AppendLine();
+            nodes.Append("End node ").Append(end.Number).AppendLine();
+            encountered.Append("End node ").Append(end.Number).AppendLine();
+#endif
 
             while (nodeList.Count > 0)
             {
@@ -504,18 +530,23 @@ namespace Graph
                 Node best = nodeList.Dequeue();
                 double bestDist = best.realCost;
 
-                encountered += "Node " + best.Number + " " + best.ToString() + "\n";
-                nodes += "Node " + best.Number + "\n";
+#if DEBUG_PATHFINDER_LOGDEBUG
+                encountered.Append("Node ").Append(best.Number).Append(" ").Append(best).AppendLine();
+                nodes.Append("Node ").Append(best.Number).AppendLine();
+#endif
 
                 //If this is the end, stop, show the path, and return it.
                 if (best.Equals(end))
                 {
                     ReconstructPath(pathStoreLoc, end);
                     ShowPath(pathStoreLoc);
-                    encountered += "Finished!\n\nFinal dist: " 
-                                + best.realCost + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                    encountered.Append("Finished!\n\nFinal dist: ")
+                               .Append(best.realCost).AppendLine();
                     Debug.Log(encountered);
                     Debug.Log(nodes);
+#endif
                     return;
                 }
                 best.Visited = true;
@@ -539,9 +570,13 @@ namespace Graph
                         other.realCost = testDist;
                         other.heuristicCost = Heuristic(other, end);
                         nodeList.Enqueue(other, other.realCost + other.heuristicCost);
-                        encountered += "   added " + other.Number
-                            + ", total estimated cost " 
-                            + (other.realCost + other.heuristicCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   added ").Append(other.Number)
+                                   .Append(", total estimated cost ")
+                                   .Append(other.realCost + other.heuristicCost)
+                                   .AppendLine();
+#endif
                         continue;
                     }
                     //If the other node was a bad path, and this one's better, replace it.
@@ -550,9 +585,13 @@ namespace Graph
                         other.CameFrom = best;
                         other.realCost = testDist;
                         nodeList.Update(other, other.realCost + other.heuristicCost);
-                        encountered += "   updated " + other.Number
-                            + ", total new estimated cost "
-                            + (other.realCost + other.heuristicCost) + "\n";
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+                        encountered.Append("   updated ").Append(other.Number)
+                                   .Append(", total new estimated cost ")
+                                   .Append(other.realCost + other.heuristicCost)
+                                   .AppendLine();
+#endif
                     }
                 }
             }

@@ -32,7 +32,7 @@ namespace Graph
             if (denseGraph == null)
             {
                 denseGraph = self.AddComponent<PathFinder>();
-                denseGraph.initializeGraph(new Vector2(-17, -13), new Vector2(17, 14), 1.0f, 0.75f);
+                denseGraph.initializeGraph(new Vector2(-17, -13), new Vector2(17, 14), 1.0f /5f, 0.75f * 5);
             }
             return denseGraph;
         }
