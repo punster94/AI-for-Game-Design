@@ -31,7 +31,6 @@ namespace Graph
         public double heuristicCost { get; set; }
         private int number;
         public int Number { get { return number; } }
-        public bool Occupied { get; set; }
         private SquareType terrainType;
         public SquareType TerrainType { get { return terrainType; } }
         private float edgePenalty;
@@ -45,6 +44,22 @@ namespace Graph
             CameFrom = null;
             realCost = double.PositiveInfinity;
             heuristicCost = double.PositiveInfinity;
+        }
+
+        public bool Occupied { get { return occupier == null; } }
+
+        private Unit occupier;
+        public Unit Occupier
+        {
+            get
+            {
+                return occupier;
+            }
+
+            set
+            {
+                occupier = value;
+            }
         }
 
         static public readonly string gameTag = "NodeTag";
@@ -69,7 +84,7 @@ namespace Graph
             Slippery, TableDef, Sandpaper, Unwalkable
         }
 
-        private SquareType randWalkState()
+        public static SquareType randWalkState()
         {
             float randVal = Random.value;
             if (randVal < 0.10)
@@ -118,7 +133,7 @@ namespace Graph
         /// <param name="scale">The node's visible scale.</param>
         /// <param name="num">The node's internal number.</param>
         /// <param name="vis">Whether the node is visible or not. Default is false.</param>
-        public Node(GameObject parent, Sprite floorImg, Vector2 position, IntVec2 gridPos, float scale = 0.75f, int num = 0, bool vis = true)
+        public Node(GameObject parent, Sprite floorImg, Vector2 position, IntVec2 gridPos, SquareType typeOfTerrain, float scale = 0.75f, int num = 0, bool vis = true)
         {
             pos = position;
             this.gridPos = gridPos;
@@ -134,10 +149,11 @@ namespace Graph
             drawer.tag = gameTag;
             // Draw a little bigger than scale.
             spriteDraw.transform.localScale = new Vector2(scale * 1.35f, scale * 1.35f);
-            
+
             // Draw with 50% alpha-white.
             //spriteDraw.color = defColor;
-            terrainType = randWalkState();
+            //terrainType = randWalkState();
+            terrainType = typeOfTerrain;
             edgePenalty = costOfWalkState(terrainType);
             resetColor();
             //spriteDraw.color = Random.ColorHSV(0.2f, 1.0f, 0.1f, 0.7f, 0.2f, 1.0f);

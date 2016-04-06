@@ -31,6 +31,61 @@ namespace Graph
 
         private static int LAYER_FILTER_MASK = LayerMask.GetMask("Walls");
 
+        public void initializeWithArray(Vector2 lowLeftBound, Vector2 upRightBound, Node.SquareType[][] terrainArr)
+        {
+            lowerLeftBound = lowLeftBound;
+            upperRightBound = upRightBound;
+            
+            numXNodes = terrainArr[0].Length;
+            numYNodes = terrainArr.Length;
+
+            // Determine correct node density
+            float xDist = lowerLeftBound.x - upperRightBound.x;
+            nodeDensity = numXNodes / xDist;
+
+            // Magic number allows for proper drawing of nodes.
+            radii = 0.75f / nodeDensity;
+            
+            numValidNodes = 0;
+
+            // Initialize the node array. Note the inverted y, normal x setup.
+            nodeArr = new Node[numYNodes][];
+            for (int y = 0; y < numYNodes; y++)
+            {
+                nodeArr[y] = new Node[numXNodes];
+
+                for (int x = 0; x < numXNodes; x++)
+                {
+                    IntVec2 arrPos = new IntVec2(x, y);
+                    Vector2 newPosV2 = ArrPosToWorldSpace(arrPos);
+
+                    nodeArr[y][x] = new Node(transform.gameObject, nodeImg, newPosV2, arrPos, terrainArr[y][x], radii * 2, numValidNodes++);
+
+                    //add up-left edge (inverse y)
+                    if (allowedPaths > Paths.quadDir)
+                    {
+                        if (x - 1 >= 0 && y - 1 >= 0
+                            && isOkayToFloodDiag(arrPos, IntVec2.down, IntVec2.left))
+                            nodeArr[y][x].addBidirEdge(nodeArr[y - 1][x - 1], sqrt2);
+                        //add up-right edge (inverse y)
+                        if (x + 1 < numXNodes && y - 1 >= 0
+                            && isOkayToFloodDiag(arrPos, IntVec2.down, IntVec2.right))
+                            nodeArr[y][x].addBidirEdge(nodeArr[y - 1][x + 1], sqrt2);
+                    }
+                    //add up edge
+                    if (y - 1 >= 0
+                        && isOkayToFloodUDLR(arrPos, IntVec2.down, (Vector2)IntVec2.left))
+                        nodeArr[y][x].addBidirEdge(nodeArr[y - 1][x], 1);
+                    //add left edge
+                    if (x - 1 >= 0
+                        && isOkayToFloodUDLR(arrPos, IntVec2.left, (Vector2)IntVec2.up))
+                        nodeArr[y][x].addBidirEdge(nodeArr[y][x - 1], 1);
+                }
+            }
+
+            isInitialized = true;
+        }
+
         /// <summary>
         /// Initializes the graph.
         /// Important: Since this uses physics, we cannot use a constructor.
@@ -66,10 +121,10 @@ namespace Graph
 
             radii = pathWidth / 2.0f;
 
+            numValidNodes = 0;
+
             //floodFill(startPos);
             fillAll();
-
-            numValidNodes = 0;
 
             isInitialized = true;
         }
@@ -182,94 +237,15 @@ namespace Graph
         public List<Node> nodesWithinEnduranceValue(Node startNode, float endurance = 16.0f)
         {
             //for future reference, less code copy-paste worth negligible performance reduction.
-            //return nodesThatSatisfyPred(startNode, (_) => true, endurance);
-            List<Node> foundNodes = new List<Node>();
-            MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
-
-            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-            foreach (Node[] arr in nodeArr)
-                foreach (Node p in arr)
-                    if (p != null)
-                    {
-                        p.initPathfinding();
-                    }
-
-            startNode.realCost = 0;
-            nodeList.Enqueue(startNode, startNode.realCost);
-
-#if DEBUG_PATHFINDER_LOGDEBUG
-            StringBuilder encountered = new StringBuilder();
-            StringBuilder nodes = new StringBuilder();
-            nodes.Append("Start node ").Append(startNode.Number).AppendLine();
-            encountered.Append("Start node ").Append(startNode.Number).AppendLine();
-            encountered.Append("endurance = ").Append(endurance).AppendLine();
-#endif
-
-            while (nodeList.Count > 0)
-            {
-                //Pick the best looking node, by f-value.
-                Node best = nodeList.Dequeue();
-                double bestDist = best.realCost;
-
-#if DEBUG_PATHFINDER_LOGDEBUG
-                encountered.Append("Node ").Append(best.Number).Append(" ").Append(best).AppendLine();
-                nodes.Append("Node ").Append(best.Number).AppendLine();
-#endif
-
-                best.Visited = true;
-                foundNodes.Add(best);
-
-                //string updateString = "updating: ";
-                foreach (Edge e in best.getEdges())
-                {
-                    Node other = e.getNode();
-
-                    //We already visited this node, move along,
-                    if (other.Visited)
-                        continue;
-
-                    //Tentative distance.
-                    double testDist = e.getWeight() + bestDist;
-
-                    if (testDist > endurance)
-                        continue;
-
-                    //If the other node isn't in the priority queue, add it.
-                    if (!nodeList.Contains(other))
-                    {
-                        other.CameFrom = best;
-                        other.realCost = testDist;
-                        nodeList.Enqueue(other, other.realCost);
-
-#if DEBUG_PATHFINDER_LOGDEBUG
-                        encountered.Append("   added ").Append(other.Number)
-                                   .Append(", total estimated cost ")
-                                   .Append(other.realCost).AppendLine();
-#endif
-                        continue;
-                    }
-                    //If the other node was a bad path, and this one's better, replace it.
-                    else if (other.realCost > testDist)
-                    {
-                        other.CameFrom = best;
-                        other.realCost = testDist;
-                        nodeList.Update(other, other.realCost);
-
-#if DEBUG_PATHFINDER_LOGDEBUG
-                        encountered.Append("   updated ").Append(other.Number)
-                                   .Append(", total new estimated cost ")
-                                   .Append(other.realCost).AppendLine();
-#endif
-                    }
-                }
-            }
-#if DEBUG_PATHFINDER_LOGDEBUG
-            Debug.Log(encountered);
-            Debug.Log(nodes);
-#endif
-
-            return foundNodes;
+            return nodesThatSatisfyPred(startNode, (_) => true, endurance);
         }
+
+        // TODO: Change to in unit class prev.Occupier = null, next.Ocuppier = this
+        //public void MoveUnit(int prevX, int prevY, Unit u)
+        // {
+        //  nodeArr[prevY][prevX].Occupier = null;
+        //  nodeArr[u.getX()][u.getY()].Occupier = u;
+        // }
 
         /// <summary>
         /// Destroys the current graph, creates a new one with the same area.
@@ -754,7 +730,7 @@ namespace Graph
                 foreach (Node n in reach)
                 {
                     //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), radii * 1.75f);
+                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
                     q.setColor(new Color(0, 0.5f, 0, 0.75f));
                     
                     overlayNodes.Add(q);
@@ -764,7 +740,7 @@ namespace Graph
                 foreach (Node n in inRange)
                 {
                     //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), radii * 1.75f);
+                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
                     q.setColor(new Color(0, 0, 0.5f, 0.75f));
 
                     overlayNodes.Add(q);
@@ -842,7 +818,7 @@ namespace Graph
                     if (!Physics2D.OverlapCircle(newPosV2, radii, LAYER_FILTER_MASK))
 #endif
                     {
-                        nodeArr[y][x] = new Node(transform.gameObject, nodeImg, newPosV2, arrPos, radii * 2, numValidNodes++);
+                        nodeArr[y][x] = new Node(transform.gameObject, nodeImg, newPosV2, arrPos, Node.randWalkState(), radii * 2, numValidNodes++);
 
                         //add up-left edge (inverse y)
                         if (allowedPaths > Paths.quadDir)
