@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using Graph;
 
 public abstract class Unit {
 	// Fields for animation control
@@ -20,16 +21,20 @@ public abstract class Unit {
 	private int minAttackRange;
 	private int maxAttackRange;
 
-	private int xPos;
-	private int yPos;
+	private Node node;
+	private bool enemy;
 
-	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, int x, int y) {
+	//TODO: Let's remove the dependence on x and y by passing in a Node. We should discuss how the main game should have access to Node objects in the nodeArr.
+	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, int x, int y, bool e) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
 		bendiness = bendinessFactor;
 		hardness = hardnessFactor;
 		minAttackRange = attackRangeMin;
 		maxAttackRange = attackRangeMax;
+		enemy = e;
+
+		//TODO: Set the Unit's node, either by passing it in or by using the (x, y) coordinates passed in
 	}
 
 	// Getters
@@ -61,6 +66,14 @@ public abstract class Unit {
 		return maxAttackRange;
 	}
 
+	public Node getNode() {
+		return node;
+	}
+
+	public bool isEnemy() {
+		return enemy;
+	}
+
 	public void setSpriteObject(GameObject g) {
 		spriteObject = g;
 	}
@@ -88,10 +101,15 @@ public abstract class Unit {
 
 		if(clay <= 0)
 			result.setKilled(true);
+
 		
 		// Only counter if it is the first attack in a set and the enemy's range allows it
-		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance )
-			enemy.takeAttackFrom(this, 1);
+		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance)
+			counter = (AttackResult) enemy.takeAttackFrom(this, 1)[0];
+
+		// Add the main attack result first, then the counter result
+		attacks.Add(result);
+		attacks.Add(counter);
 
 		return attacks;
 	}
