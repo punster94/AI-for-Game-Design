@@ -46,7 +46,7 @@ public class SubjectBehavior : MonoBehaviour {
     // Use this for initialization
     void Start() {
         // Initialize reference to self and sensor objects
-        self = GameObject.Find(selfTag);
+        self = transform.gameObject;
         sensors.Add(new AdjacentAgentSensor(self, sensableTag, aasRadius));
         sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius * 1.3f, 0, 90));
         sensors.Add(new PieSliceSensor(self, sensableTag, aasRadius, 90, 90));

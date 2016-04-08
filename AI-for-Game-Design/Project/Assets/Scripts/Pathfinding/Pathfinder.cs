@@ -21,10 +21,47 @@ namespace Graph
         public enum Paths { quadDir, octDir }
         public static Paths allowedPaths = Paths.quadDir;
 
+        /// TODO: Implement this in PCG
+        /// <summary>
+        /// Generates a pair of list of spawn points. Assumes graph already generated.
+        /// Picks either top right, bottom left, or top left, bottom right pairs.
+        /// Either key/value can be enemy/friend spawn points.
+        /// </summary>
+        /// <param name="spawnPointsPerPlayer">Number of spawn points to provide each player</param>
+        /// <returns>A pair of spawn points (lists of valid node points), empty if failed.</returns>
+        public KeyValuePair<List<Unit>, List<Unit>> getSpawnPoints(int spawnPointsPerPlayer = 5)
+        {
+            List<Unit> enemy = new List<Unit>(), friend = new List<Unit>();
+
+            Vector2 locusEnemy, locusFriend;
+
+            // pick top right, bottom left pair
+            if (Random.value < 0.5)
+            {
+                locusEnemy = upperRightBound;
+                locusFriend = lowerLeftBound;
+            }
+            // pick bottom right, top left pair
+            else
+            {
+                locusEnemy = new Vector2(upperRightBound.x, lowerLeftBound.y);
+                locusFriend = new Vector2(lowerLeftBound.x, upperRightBound.y);
+            }
+            
+
+
+            return new KeyValuePair<List<Unit>, List<Unit>>(enemy, friend);
+        }
+
         // Node array is stored as Node[inverse-y][x].
         private Node[][] nodeArr;
         private float radii;
-        private Sprite nodeImg = Resources.Load<Sprite>("PathLoc");
+        private Sprite nodeImg;
+
+        public void Start()
+        {
+            nodeImg = Resources.Load<Sprite>("PathLoc");
+        }
 
         private static int LAYER_FILTER_MASK = LayerMask.GetMask("Walls");
 
