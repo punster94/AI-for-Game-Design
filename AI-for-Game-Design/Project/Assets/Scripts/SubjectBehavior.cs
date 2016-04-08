@@ -26,7 +26,7 @@ public class SubjectBehavior : MonoBehaviour {
     Vector3 currentSpeed;
 
     // Physics properties
-    static float maxSpeed = 12f;
+    static float maxSpeed = 1f;
     static float accelerationRate = 10f;
     static float frictionRate = 0.95f;
     static float backRate = 6f;
@@ -59,8 +59,7 @@ public class SubjectBehavior : MonoBehaviour {
         sensors.Add(new WallSensor(self, wallTag, 180.0f, 1));
         frame = 0;
 
-        pathfinder = self.AddComponent<PathFinder>();
-        pathfinder.initializeGraph(new Vector2(-17, -13), new Vector2(17, 14), 1.0f, 0.75f);
+        pathfinder = PathManager.getDenseGraph();
 
         // Initialize speed at zero
         initializeSpeed();
