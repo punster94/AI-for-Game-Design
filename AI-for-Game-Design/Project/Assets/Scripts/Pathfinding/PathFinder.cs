@@ -3,7 +3,6 @@
 //#define DEBUG_PATHFINDER_LOGDEBUG   // sends pathfinding debug to debug. SIGNIFICANT PERFORMANCE IMPACT!
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 using System.Text;
 
 namespace Graph
@@ -24,18 +23,17 @@ namespace Graph
         public enum Paths { quadDir, octDir }
         public static Paths allowedPaths = Paths.quadDir;
 
-        /// TODO: Implement this in PCG
+        /// TODO: Implement this in PCG, or use suggestion in MainGame
         /// <summary>
         /// Generates a pair of list of spawn points. Assumes graph already generated.
         /// Picks either top right, bottom left, or top left, bottom right pairs.
         /// Either key/value can be enemy/friend spawn points.
+        /// Spawns with no gap, but could randomly select from returned positions.
         /// </summary>
         /// <param name="spawnPointsPerPlayer">Number of spawn points to provide each player</param>
         /// <returns>A pair of spawn points (lists of valid node points), empty if failed.</returns>
-        public KeyValuePair<List<Unit>, List<Unit>> getSpawnPoints(int spawnPointsPerPlayer = 5)
+        public KeyValuePair<List<Node>, List<Node>> getSpawnPoints(int spawnPointsPerPlayer = 5)
         {
-            List<Unit> enemy = new List<Unit>(), friend = new List<Unit>();
-
             Vector2 locusEnemy, locusFriend;
 
             // pick top right, bottom left pair
@@ -50,10 +48,98 @@ namespace Graph
                 locusEnemy = new Vector2(upperRightBound.x, lowerLeftBound.y);
                 locusFriend = new Vector2(lowerLeftBound.x, upperRightBound.y);
             }
-            
+                        
+            return getSpawnPoints(locusEnemy, locusFriend, spawnPointsPerPlayer);
+        }
 
 
-            return new KeyValuePair<List<Unit>, List<Unit>>(enemy, friend);
+        /// TODO: Implement this in PCG, or use suggestion in MainGame
+        /// <summary>
+        /// Generates a pair of list of spawn points. Assumes graph already generated.
+        /// Given a pair of locus points, tries to generate a spawn point near it.
+        /// Either key/value can be enemy/friend spawn points.
+        /// Spawns with no gap, but could randomly select from returned positions.
+        /// </summary>
+        /// <param name="spawnPointsPerPlayer">Number of spawn points to provide each player</param>
+        /// <returns>A pair of spawn points (lists of valid node points), empty if failed.</returns>
+        public KeyValuePair<List<Node>, List<Node>> getSpawnPoints(Vector2 spawnPoint1, Vector2 spawnPoint2, int spawnPointsPerPlayer = 5)
+        {
+            List<Node> enemy = new List<Node>(), friend = new List<Node>();
+
+            //The midpoint vector of sorts. 
+            Vector2 shiftVec = (spawnPoint2 - spawnPoint1) / 8;
+
+            Node spawnEn = null, spawnFr = null;
+            int maxTries = 10;
+
+            // Tries to create a path
+            for (int i = 0; i < maxTries; i++)
+            {
+                spawnEn = BFSUnoccupiedAndValid(spawnPoint1);
+                spawnFr = BFSUnoccupiedAndValid(spawnPoint2);
+
+                // Checks for AStar connection between spawns.
+                Queue<Node> pathToSpawns = new Queue<Node>();
+                AStar(pathToSpawns, spawnFr, spawnEn);
+
+                // Failed: no connection.
+                if (pathToSpawns.Count == 0)
+                {
+                    spawnEn = spawnFr = null;
+
+                    // Takes a sorta random walk towards the midpoint.
+                    // This duplicates the action taken on either side.
+                    float randWalkToMidX = Random.value;
+                    float randWalkToMidY = Random.value;
+                    Vector2 shiftToCenter = new Vector2(shiftVec.x * randWalkToMidX, shiftVec.y * randWalkToMidY);
+
+                    spawnPoint1 += shiftToCenter;
+                    spawnPoint2 -= shiftToCenter;
+                }
+                else
+                    break;
+            }
+
+            if (spawnEn == null)
+            {
+                throw new KeyNotFoundException("Didn't find a spawn location!");
+            }
+
+            // Reserves occupation, so we can loop through graph.
+            spawnEn.Occupied = spawnFr.Occupied = true;
+            enemy.Add(spawnEn);
+            friend.Add(spawnFr);
+            spawnPointsPerPlayer--;
+
+            while (spawnPointsPerPlayer > 0)
+            {
+                Node foundEn, foundFr;
+
+                foundEn = BFSUnoccupiedAndValid(spawnEn);
+                foundFr = BFSUnoccupiedAndValid(spawnFr);
+
+                // Error conditions for BFS
+                // Could just break instead, and return less spawn points... bad idea.
+                if (foundEn == spawnEn || foundFr == spawnFr)
+                {
+                    throw new KeyNotFoundException("Didn't find a spawn location!");
+                }
+
+                foundEn.Occupied = foundFr.Occupied = true;
+
+                enemy.Add(foundEn);
+                friend.Add(foundFr);
+
+                spawnPointsPerPlayer--;
+            }
+
+            // Resets occupied status to allow future use.
+            foreach (Node n in enemy)
+                n.Occupied = false;
+            foreach (Node n in friend)
+                n.Occupied = false;
+
+            return new KeyValuePair<List<Node>, List<Node>>(enemy, friend);
         }
 
         // Node array is stored as Node[inverse-y][x].
@@ -61,7 +147,8 @@ namespace Graph
         private float radii;
         private Sprite nodeImg;
 
-        public void Start()
+        //Reserves image before called upon.
+        public void Awake()
         {
             nodeImg = Resources.Load<Sprite>("PathLoc");
         }
@@ -166,6 +253,17 @@ namespace Graph
             isInitialized = true;
         }
 
+        ///Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
+        private void initializePathfinding()
+        {
+            foreach (Node[] arr in nodeArr)
+                foreach (Node p in arr)
+                    if (p != null)
+                    {
+                        p.initPathfinding();
+                    }
+        }
+
         /// <summary>
         /// Returns a sorted list of nodes within a given endurance value.
         /// Performs a Dijkstra-like algorithm.
@@ -173,18 +271,12 @@ namespace Graph
         /// <param name="satifies">The predicate each node must follow.</param>
         /// <param name="endurance">The maximum endurance to follow out.</param>
         /// <returns>A sorted list of nodes within a given endurance value.</returns>
-        public List<Node> nodesThatSatisfyPred(Node startNode, Predicate<Node> satifies, float endurance = 16.0f)
+        public List<Node> nodesThatSatisfyPred(Node startNode, System.Predicate<Node> satifies, float endurance = 16.0f)
         {
             List<Node> foundNodes = new List<Node>();
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-            foreach (Node[] arr in nodeArr)
-                foreach (Node p in arr)
-                    if (p != null)
-                    {
-                        p.initPathfinding();
-                    }
+            initializePathfinding();
 
             startNode.realCost = 0;
             nodeList.Enqueue(startNode, startNode.realCost);
@@ -277,13 +369,6 @@ namespace Graph
             return nodesThatSatisfyPred(startNode, (_) => true, endurance);
         }
 
-        // TODO: Change to in unit class prev.Occupier = null, next.Ocuppier = this
-        //public void MoveUnit(int prevX, int prevY, Unit u)
-        // {
-        //  nodeArr[prevY][prevX].Occupier = null;
-        //  nodeArr[u.getX()][u.getY()].Occupier = u;
-        // }
-
         /// <summary>
         /// Destroys the current graph, creates a new one with the same area.
         /// Graph must already be created to use this.
@@ -293,8 +378,6 @@ namespace Graph
         {
             if (!isInitialized)
                 throw new UnassignedReferenceException("Pathfinder not initialized yet!");
-
-            Debug.Log("Recreated Graph.");
 
             bool graphWasDisplayed = graphIsDisplayed();
 
@@ -319,6 +402,63 @@ namespace Graph
             fillAll();
             if (graphWasDisplayed)
                 graphDisplay(true);
+        }
+
+        /// <summary>
+        /// Unlike closestMostValidNode; BFS does up to a full BFS
+        /// to find the closest unocupied & walkable node to a given location.
+        /// Only use when not wanting to take into account edge costs.
+        /// If no nodes found that are valid, returns the start node.
+        /// </summary>
+        /// <param name="startLoc">The location to start looking from.</param>
+        /// <returns>The first unocupied/valid walkable tile found. If no nodes found that are valid, returns the start node.</returns>
+        private Node BFSUnoccupiedAndValid(Vector2 startLoc)
+        {
+            Node startNode = closestMostValidNode(startLoc);
+            return BFSUnoccupiedAndValid(startNode);
+        }
+
+
+        /// <summary>
+        /// Unlike closestMostValidNode; BFS does up to a full BFS
+        /// to find the closest unocupied & walkable node to a given location.
+        /// Only use when not wanting to take into account edge costs.
+        /// If no nodes found that are valid, returns the start node.
+        /// Uses Nodes directly instead of converting from Vector2.
+        /// </summary>
+        /// <param name="startLoc">The location to start looking from.</param>
+        /// <returns>The first unocupied/valid walkable tile found. If no nodes found that are valid, returns the start node.</returns>
+        private Node BFSUnoccupiedAndValid(Node startNode)
+        {
+            if (!startNode.Occupied && startNode.isWalkable())
+                return startNode;
+
+            initializePathfinding();
+            
+            Queue<Node> listOfNodes = new Queue<Node>();
+            listOfNodes.Enqueue(startNode);
+
+            // Can't use visited, as we're already using that hack in initializePathfinding...
+            startNode.realCost = -1;
+
+            while (listOfNodes.Count > 0)
+            {
+                Node found = listOfNodes.Dequeue();
+                if (!found.Occupied && found.isWalkable())
+                    return found;
+
+                foreach (Edge e in found.getEdges())
+                {
+                    Node candidate = e.getNode();
+                    if (candidate.realCost > 0)
+                        listOfNodes.Enqueue(candidate);
+
+                    // Can't use visited, as we're already using that hack in initializePathfinding...
+                    candidate.realCost = -1;
+                }
+            }
+
+            return startNode;
         }
         
         /// <summary>
@@ -432,8 +572,11 @@ namespace Graph
 
         private Node unobstructed(int x, int y, Vector2 pos)
         {
-            if (x < 0 || y < 0 || x >= numXNodes || y >= numYNodes || nodeArr[y][x] == null ||
-               Physics2D.Linecast(nodeArr[y][x].getPos(), pos, LAYER_FILTER_MASK))
+            bool failed = x < 0 || y < 0 || x >= numXNodes || y >= numYNodes || nodeArr[y][x] == null;
+#if DEBUG_PATHFINDER_UPDATELOOP
+            failed |= Physics2D.Linecast(nodeArr[y][x].getPos(), pos, LAYER_FILTER_MASK))
+#endif
+            if (failed)
                 return null;
             return nodeArr[y][x];
         }
@@ -508,14 +651,8 @@ namespace Graph
         {
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-            foreach (Node[] arr in nodeArr)
-                foreach (Node p in arr)
-                    if (p != null)
-                    {
-                        p.initPathfinding();
-                    }
-            Func<Node, Node, float> Heuristic;
+            initializePathfinding();
+            System.Func<Node, Node, float> Heuristic;
             if (allowedPaths == Paths.quadDir)
                 Heuristic = ManhattenHeuristic;
             else if (allowedPaths == Paths.octDir)
@@ -608,6 +745,12 @@ namespace Graph
                     }
                 }
             }
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+            encountered.Append("Failed!\n");
+            Debug.Log(encountered);
+            Debug.Log(nodes);
+#endif
         }
 
         /// <summary>
@@ -756,8 +899,7 @@ namespace Graph
 
                 List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(getMousePos()), 8);
                 List<Node> range = NodesInRangeOfNodes(reach, 2, 3);
-
-                //HACK: DOESN'T WORK!
+                
                 HashSet<Node> inReach = new HashSet<Node>();
                 inReach.UnionWith(reach);
                 HashSet<Node> inRange = new HashSet<Node>();
@@ -804,9 +946,9 @@ namespace Graph
 
             //If we were displaying a path, reset the colors.
             if (manualStartNode != null)
-                manualStartNode.setColor(Node.defColor);
+                manualStartNode.resetColor();
             if (manualEndNode != null)
-                manualEndNode.setColor(Node.defColor);
+                manualEndNode.resetColor();
 
             //Set the colors for the start and end nodes.
             manualStartNode = PathCopy[0];

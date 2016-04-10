@@ -17,19 +17,25 @@ public class MainGame : MonoBehaviour {
 		allyUnits = new List<Unit>();
 
         parent = transform.gameObject;
-        PathFinder pathFinder = parent.GetComponent<PathFinder>();
+        GraphManager pathManager = new GraphManager(parent);
+        PathFinder pathFinder = pathManager.getGraph();
 
         //TODO: Integrate PCG here
-        pathFinder.initializeGraph(new Vector2(-17, -13), new Vector2(17, 14), 1.0f, 0.75f);
-        KeyValuePair<List<Unit>, List<Unit>> spawnPoints = pathFinder.getSpawnPoints();
+        //OR generate more spawns than needed and randomly select from generated spawn points.
+        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(5);
 
         enemyUnitObjects = GameObject.Find("Enemy Units");
         allyUnitObjects = GameObject.Find("Ally Units");
         enemyUnitObjects.transform.parent = parent.transform;
         allyUnitObjects.transform.parent = parent.transform;
 
-        enemyUnits.Add(new LongArmUnit(enemyUnitObjects, "Enemy LongArm", 12, 12, true));
-		allyUnits.Add(new LongArmUnit(allyUnitObjects, "Ally LongArm", 13, 10, false));
+        for (int i = 0; i < spawnPoints.Key.Count; i++)
+        {
+            Node spawnEnemy = spawnPoints.Key[i];
+            Node spawnAlly = spawnPoints.Value[i];
+            enemyUnits.Add(new LongArmUnit(enemyUnitObjects, "Enemy LongArm", spawnEnemy, true));
+            allyUnits.Add(new LongArmUnit(allyUnitObjects, "Ally LongArm", spawnAlly, false));
+        }
 	}
 	
 	// Update is called once per frame
