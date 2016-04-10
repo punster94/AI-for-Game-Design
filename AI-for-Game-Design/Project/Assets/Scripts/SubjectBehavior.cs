@@ -11,7 +11,6 @@ public class SubjectBehavior : MonoBehaviour {
     const float diffDist = 1.2f;
     float origDist = float.PositiveInfinity;
     float minDist = float.PositiveInfinity;
-    Physics2D physController;
     Queue<Vector2> targets = new Queue<Vector2>();
     //Should be loaded into a constants file
     private static int LAYER_FILTER_MASK = LayerMask.GetMask("Walls");
@@ -26,7 +25,7 @@ public class SubjectBehavior : MonoBehaviour {
     Vector3 currentSpeed;
 
     // Physics properties
-    static float maxSpeed = 1f;
+    static float maxSpeed = 12f;
     static float accelerationRate = 10f;
     static float frictionRate = 0.95f;
     static float backRate = 6f;
@@ -59,14 +58,23 @@ public class SubjectBehavior : MonoBehaviour {
         sensors.Add(new WallSensor(self, wallTag, 180.0f, 1));
         frame = 0;
 
-        pathfinder = PathManager.getDenseGraph();
-
         // Initialize speed at zero
         initializeSpeed();
     }
 
     void initializeSpeed() {
         currentSpeed.x = currentSpeed.y = currentSpeed.z = 0;
+    }
+
+    /// <summary>
+    /// treat the pathfinder like a singleton...
+    /// </summary>
+    /// <returns></returns>
+    private PathFinder getPathFinder()
+    {
+        if (pathfinder == null)
+            pathfinder = transform.parent.GetComponentInChildren<PathFinder>();
+        return pathfinder;
     }
 
     // Update is called once per frame
@@ -92,7 +100,7 @@ public class SubjectBehavior : MonoBehaviour {
         {
             if (Input.GetKeyDown("r"))
             {
-                pathfinder.onlineRecreateGraph();
+                getPathFinder().onlineRecreateGraph();
             }
 
             if (Input.GetMouseButtonDown((int)MouseButton.left))
@@ -104,7 +112,7 @@ public class SubjectBehavior : MonoBehaviour {
                 //AStar pathfinding
                 targets.Clear();
                 Queue<Node> path = new Queue<Node>();
-                pathfinder.AStar(path, transform.position, getMousePos());
+                getPathFinder().AStar(path, transform.position, getMousePos());
                 foreach (Node n in path)
                     targets.Enqueue(new Vector2(n.getPos().x, n.getPos().y));
             }
@@ -129,7 +137,7 @@ public class SubjectBehavior : MonoBehaviour {
 
         // Toggles graph visiblity
         if (Input.GetKeyDown("p"))
-            pathfinder.graphDisplay(!pathfinder.graphIsDisplayed());
+            getPathFinder().graphDisplay(!getPathFinder().graphIsDisplayed());
     }
 
     private Vector2 getMousePos()

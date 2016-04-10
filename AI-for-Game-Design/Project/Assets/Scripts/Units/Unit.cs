@@ -25,7 +25,7 @@ public abstract class Unit {
 	private bool enemy;
 
 	//TODO: Let's remove the dependence on x and y by passing in a Node. We should discuss how the main game should have access to Node objects in the nodeArr.
-	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, int x, int y, bool e) {
+	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, Node gridTile, bool e) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
 		bendiness = bendinessFactor;
@@ -34,7 +34,7 @@ public abstract class Unit {
 		maxAttackRange = attackRangeMax;
 		enemy = e;
 
-		//TODO: Set the Unit's node, either by passing it in or by using the (x, y) coordinates passed in
+        node = gridTile;
 	}
 
 	// Getters

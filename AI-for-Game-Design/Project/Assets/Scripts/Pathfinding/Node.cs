@@ -46,7 +46,19 @@ namespace Graph
             heuristicCost = double.PositiveInfinity;
         }
 
-        public bool Occupied { get { return occupier == null; } }
+        // Sadly, we need to be able to reserve nodes, so we need a setter.
+        private bool occupied = false;
+        public bool Occupied
+        {
+            get
+            {
+                return occupied;
+            }
+            set
+            {
+                occupied = value;
+            }
+        }
 
         private Unit occupier;
         public Unit Occupier
@@ -59,6 +71,7 @@ namespace Graph
             set
             {
                 occupier = value;
+                Occupied = Occupier != null;
             }
         }
 
@@ -159,7 +172,6 @@ namespace Graph
             //spriteDraw.color = Random.ColorHSV(0.2f, 1.0f, 0.1f, 0.7f, 0.2f, 1.0f);
 
             CameFrom = null;
-            Occupied = false;
             number = num;
 
 #if DEBUG_NODE_EDGES

@@ -1,18 +1,18 @@
 ﻿using UnityEngine;
 using System.Collections;
+using Graph;
 
 public class LongArmUnit : Unit {
 
 	public static int framesInAnimation = 4;
 
 	Sprite sprite = Resources.Load<Sprite>("LongArm");
-
-	//TODO: Now that a Unit has a Node, the transform position should be set using values from the Node, hopefully removing the dependence on x and y in the parameters here.
+    
 	// Constructs a LongArmUnit given the GameObject it will relate to (remember, LongArmUnit and Unit are still both MonoBehavior classes)
-	public LongArmUnit(GameObject parent, string name, int x, int y, bool isEnemy) : base(10, 6, 6, 3, 1, 2, x, y, isEnemy){
+	public LongArmUnit(GameObject parent, string name, Node gridTile, bool isEnemy) : base(10, 6, 6, 3, 1, 2, gridTile, isEnemy){
 		GameObject g = new GameObject(name);
 		g.transform.parent = parent.transform;
-		g.transform.position = new Vector3((float) x, (float) y);
+		g.transform.position = gridTile.getPos();
 		g.AddComponent<SpriteRenderer>();
 		g.GetComponent<SpriteRenderer>().sprite = sprite;
 		setSpriteObject(g);
