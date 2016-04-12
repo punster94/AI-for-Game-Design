@@ -467,7 +467,7 @@ namespace Graph
         /// </summary>
         /// <param name="loc">The location to start looking from.</param>
         /// <returns>The most valid node that's closest to the given location.</returns>
-        private Node closestMostValidNode(Vector2 loc)
+        public Node closestMostValidNode(Vector2 loc)
         {
             IntVec2 pair = WorldSpaceToArrPos(loc);
 
@@ -886,48 +886,49 @@ namespace Graph
         /// </summary>
         void Update()
         {
-            if (Input.GetKeyDown("y"))
-            {
-                if (overlayNodes == null)
-                    overlayNodes = new List<Node>();
-
-                foreach (Node n in overlayNodes)
-                    if (n != null)
-                        n.destroyThisNode();
-
-                overlayNodes.Clear();
-
-                List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(getMousePos()), 8);
-                List<Node> range = NodesInRangeOfNodes(reach, 2, 3);
-                
-                HashSet<Node> inReach = new HashSet<Node>();
-                inReach.UnionWith(reach);
-                HashSet<Node> inRange = new HashSet<Node>();
-                inRange.UnionWith(range);
-                inRange.RemoveWhere(inReach.Contains);
-
-                foreach (Node n in reach)
-                {
-                    //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-                    q.setColor(new Color(0, 0.5f, 0, 0.75f));
-                    
-                    overlayNodes.Add(q);
-                }
-
-
-                foreach (Node n in inRange)
-                {
-                    //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-                    q.setColor(new Color(0, 0, 0.5f, 0.75f));
-
-                    overlayNodes.Add(q);
-                }
-            }
+			
         }
-        
 
+		public void displayRangeOfUnit(Unit u, Vector2 mousePosition) {
+			if (overlayNodes == null)
+				overlayNodes = new List<Node>();
+
+			foreach (Node n in overlayNodes)
+				if (n != null)
+					n.destroyThisNode();
+
+			overlayNodes.Clear();
+
+			List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getCurrentWater());
+			List<Node> range = NodesInRangeOfNodes(reach, u.getMinAttackRange(), u.getMaxAttackRange());
+
+			HashSet<Node> inReach = new HashSet<Node>();
+			inReach.UnionWith(reach);
+			HashSet<Node> inRange = new HashSet<Node>();
+			inRange.UnionWith(range);
+			inRange.RemoveWhere(inReach.Contains);
+
+			foreach (Node n in reach)
+			{
+				//make slightly smaller to show square off
+				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+				q.setColor(new Color(0, 0.5f, 0, 0.75f));
+
+				overlayNodes.Add(q);
+			}
+
+
+			foreach (Node n in inRange)
+			{
+				//make slightly smaller to show square off
+				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+				q.setColor(new Color(0, 0, 0.5f, 0.75f));
+
+				overlayNodes.Add(q);
+			}
+		}
+        
+		// TODO: Remove dependence on this since MainGame will deal with clicks
         private Vector2 getMousePos()
         {
             return Camera.main.ScreenToWorldPoint(Input.mousePosition);

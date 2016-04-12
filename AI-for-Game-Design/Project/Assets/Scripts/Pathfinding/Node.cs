@@ -71,7 +71,8 @@ namespace Graph
             set
             {
                 occupier = value;
-                Occupied = Occupier != null;
+				// TODO: for some reason, this is receiving a null value in this context but preserves references correctly after the fact
+                Occupied = true;
             }
         }
 
