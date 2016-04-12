@@ -79,65 +79,58 @@ public class SubjectBehavior : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
+		if (!oldControls) {
+			// Transform the angle of the subject based on the A and D keys
+			turnSubject ();
 
-        if (!oldControls)
-        {
-            // Transform the angle of the subject based on the A and D keys
-            turnSubject();
+			// Don't calculate a new position if the stop key X is pressed
+			if (Input.GetKey (KeyCode.X)) {
+				initializeSpeed ();
+				return;
+			}
 
-            // Don't calculate a new position if the stop key X is pressed
-            if (Input.GetKey(KeyCode.X))
-            {
-                initializeSpeed();
-                return;
-            }
+			// Adjust the current speed by adding acceleration or braking (thats how you spell it I guess) forces based on the W and S keys
+			repositionSubject ();
+		}
 
-            // Adjust the current speed by adding acceleration or braking (thats how you spell it I guess) forces based on the W and S keys
-            repositionSubject();
-        }
+		//Add else to place this on. Currently runs both options.
+		if(false){
+			if (Input.GetKeyDown ("r")) {
+				getPathFinder ().onlineRecreateGraph ();
+			}
 
-        //Add else to place this on. Currently runs both options.
-        {
-            if (Input.GetKeyDown("r"))
-            {
-                getPathFinder().onlineRecreateGraph();
-            }
+			if (Input.GetMouseButtonDown ((int)MouseButton.left))
+				seek (getMousePos ());
+			else if (Input.GetMouseButton ((int)MouseButton.middle))
+				targets.Enqueue (getMousePos ());
+			else if (Input.GetMouseButtonDown ((int)MouseButton.right)) {
+				//AStar pathfinding
+				targets.Clear ();
+				Queue<Node> path = new Queue<Node> ();
+				getPathFinder ().AStar (path, transform.position, getMousePos ());
+				foreach (Node n in path)
+					targets.Enqueue (new Vector2 (n.getPos ().x, n.getPos ().y));
+			}
 
-            if (Input.GetMouseButtonDown((int)MouseButton.left))
-                seek(getMousePos());
-            else if (Input.GetMouseButton((int)MouseButton.middle))
-                targets.Enqueue(getMousePos());
-            else if (Input.GetMouseButtonDown((int)MouseButton.right))
-            {
-                //AStar pathfinding
-                targets.Clear();
-                Queue<Node> path = new Queue<Node>();
-                getPathFinder().AStar(path, transform.position, getMousePos());
-                foreach (Node n in path)
-                    targets.Enqueue(new Vector2(n.getPos().x, n.getPos().y));
-            }
-
-            updateSeek();
-        }
+			updateSeek ();
+		}
         
-        // Sense the world
-        if (frame++ == framesPerSense)
-        {
-            //note that assignment requires updating every tick.
-            sense();
-            // Keeps the frame value low, but can be maintained with modulus if frame count is needed for something else
-            frame = 0;
-        }
+		// Sense the world
+		if (frame++ == framesPerSense) {
+			//note that assignment requires updating every tick.
+			sense ();
+			// Keeps the frame value low, but can be maintained with modulus if frame count is needed for something else
+			frame = 0;
+		}
 
-        // Print the tooltip for each sensor owned by the subject
-        foreach (Sensor s in sensors)
-        {
-            s.drawTooltip();
-        }
+		// Print the tooltip for each sensor owned by the subject
+		foreach (Sensor s in sensors) {
+			s.drawTooltip ();
+		}
 
-        // Toggles graph visiblity
-        if (Input.GetKeyDown("p"))
-            getPathFinder().graphDisplay(!getPathFinder().graphIsDisplayed());
+		// Toggles graph visiblity
+		if (Input.GetKeyDown ("p"))
+			getPathFinder ().graphDisplay (!getPathFinder ().graphIsDisplayed ());
     }
 
     private Vector2 getMousePos()
