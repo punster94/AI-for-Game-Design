@@ -53,6 +53,8 @@ public class MainGame : MonoBehaviour {
 		node.Occupier = newUnit;
 		newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
 	}
+
+    bool turn = true;
 	
 	// Update is called once per frame
 	void Update() {
@@ -67,15 +69,19 @@ public class MainGame : MonoBehaviour {
 					unitSelected = false;
 				}
 				
-
 				if(clickedNode.Occupied) {
 					currentlySelectedUnit = clickedNode.Occupier;
 					currentlySelectedUnit.select();
 					unitSelected = true;
 					pathFinder.displayRangeOfUnit(currentlySelectedUnit, position);
 				}
+                else {
+                    pathFinder.clearRangeDisplay();
+                }
 			}
 		}
+        if (Input.GetMouseButtonDown((int)MouseButton.right))
+            pathFinder.clearRangeDisplay();
 	}
 
 	private bool clickInGraph(Vector2 position) {

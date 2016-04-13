@@ -44,22 +44,28 @@ public abstract class Unit {
 				//AStar pathfinding
 				targets.Clear();
 				Queue<Node> path = new Queue<Node>();
-				getPathFinder().AStar(path, transform.position, getMousePos());
+				double cost = getPathFinder().AStar(path, transform.position, getMousePos());
+                if (cost > currentWater)
+                    return;
 				foreach(Node n in path)
 					targets.Enqueue(new Vector2 (n.getPos().x, n.getPos().y));
-				hasNotMovedThisTurn = false;
+                currentWater -= (int) cost;
+				//hasNotMovedThisTurn = false;
 			}
 		}
 
 		updateSeek();
 	}
 
+    private PathFinder pathFindRef;
 	/// <summary>
 	/// treat the pathfinder like a singleton...
 	/// </summary>
 	/// <returns></returns>
 	private PathFinder getPathFinder() {
-		return transform.parent.parent.GetComponentInChildren<PathFinder>();
+        if (pathFindRef == null)
+		    pathFindRef = transform.parent.parent.GetComponentInChildren<PathFinder>();
+        return pathFindRef;
 	}
 
 	private Vector2 getMousePos() {
@@ -94,7 +100,6 @@ public abstract class Unit {
 			if(targets.Count == 0) {
 				Node newPosition = getPathFinder().closestMostValidNode(transform.position);
 				node.Occupier = null;
-				node.Occupied = false;
 				newPosition.Occupier = this;
 				node = newPosition;
 			}
@@ -228,4 +233,14 @@ public abstract class Unit {
 	public ArrayList attack(Unit enemy, int distance) {
 		return enemy.takeAttackFrom(this, distance);
 	}
+
+    public override int GetHashCode()
+    {
+        return transform.GetHashCode();
+    }
+
+    public override bool Equals(object obj)
+    {
+        return transform.Equals(obj);
+    }
 }

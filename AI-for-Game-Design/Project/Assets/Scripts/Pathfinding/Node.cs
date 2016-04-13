@@ -17,6 +17,48 @@ namespace Graph
         IntVec2 gridPos;
         SpriteRenderer spriteDraw;
 
+        // Allows storing a pointer to another node.
+        public class NodePointer
+        {
+            Node start, finish;
+            float distance;
+            public NodePointer(Node from, Node target, float dist)
+            {
+                start = from;
+                finish = target;
+                distance = dist;
+            }
+
+            public Node getTarget()
+            {
+                return finish;
+            }
+
+            public Node getStart()
+            {
+                return start;
+            }
+
+            public float getDist()
+            {
+                return distance;
+            }
+
+            public override bool Equals(object obj)
+            {
+                Node.NodePointer n = obj as NodePointer;
+                if (n == null)
+                    return false;
+                return n.start == start && n.finish == finish;
+            }
+
+            public override int GetHashCode()
+            {
+                return 57 + start.GetHashCode() * 43 + finish.GetHashCode();
+            }
+        }
+
+
 #if DEBUG_NODE_EDGES
         LineRenderer lineDraw;
 #endif
@@ -71,8 +113,7 @@ namespace Graph
             set
             {
                 occupier = value;
-				// TODO: for some reason, this is receiving a null value in this context but preserves references correctly after the fact
-                Occupied = true;
+                Occupied = value != null;
             }
         }
 
