@@ -236,11 +236,11 @@ public abstract class Unit {
 
     public override int GetHashCode()
     {
-        return transform.GetHashCode();
+        return transform.gameObject.GetHashCode();
     }
 
     public override bool Equals(object obj)
     {
-        return transform.Equals(obj);
+        return transform.gameObject.Equals(obj);
     }
 }

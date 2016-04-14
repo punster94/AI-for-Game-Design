@@ -11,78 +11,70 @@ namespace Graph
     {
         PathFinder pathFinderRef;
 
-        private class Team
+        class PathMemoizer
         {
-            public Dictionary<Unit, List<Node>> NodesCanWalkTo;
-            public Dictionary<Unit, List<Node>> NodesInRange;
-            public Dictionary<Unit, HashSet<Node>> NodesInRangeSet;
-            public Dictionary<Unit, List<Node.NodePointer>> CurrentTargets;
+            private List<Node> nodesCanWalkTo;
+            private List<Node> nodesInRange;
+            private HashSet<Node> nodesInRangeSet;
+            private List<Node.NodePointer> currentTargets;
+            private readonly Unit uRef;
 
-            public Team()
+            public PathMemoizer(Unit unitRef)
             {
-                NodesCanWalkTo = new Dictionary<Unit, List<Node>>();
-                NodesInRange = new Dictionary<Unit, List<Node>>();
-                NodesInRangeSet = new Dictionary<Unit, HashSet<Node>>();
-                CurrentTargets = new Dictionary<Unit, List<Node.NodePointer>>();
+                uRef = unitRef;
+
+                nodesCanWalkTo = new List<Node>();
+                nodesInRange = new List<Node>(); ;
+                nodesInRangeSet = new HashSet<Node>();
+                currentTargets = new List<Node.NodePointer>();
+
+                //TODO: Add logic here.
             }
 
-            public void clear()
+            internal List<Node> getAccessibleNodes(Unit u)
             {
-                NodesCanWalkTo.Clear();
-                CurrentTargets.Clear();
-                NodesInRange.Clear();
-                NodesInRangeSet.Clear();
+                throw new NotImplementedException();
+            }
+
+            internal List<Node> getNodesInRange(Unit u)
+            {
+                throw new NotImplementedException();
+            }
+
+            internal List<Node.NodePointer> getCurrentTargets(Unit u)
+            {
+                throw new NotImplementedException();
             }
         }
+
+        private PathMemoizer unitRef;
+        private Dictionary<Unit, PathMemoizer> enemyMemoizer;
+            
 
         public PathManager(PathFinder p)
         {
             pathFinderRef = p;
-
-            team1 = new Team();
-            team2 = new Team();
         }
 
-        Team team1, team2;
-
-        private void clearAllPaths()
-        {
-            team1.clear();
-            team2.clear();
-        }
 
         bool team1Type;
+        Unit currentUnit;
 
         /// <summary>
-        /// Re-sets the paths for a new turn.
+        /// Calculates a unit's paths all at once.
         /// </summary>
-        /// <param name="team1Units">Team 1: could be enemy or friend, as long as team1 != team2</param>
-        /// <param name="team2Units">Team 2: could be enemy or friend, as long as team1 != team2</param>
-        public void reserveNewPaths(List<Unit> team1Units, List<Unit> team2Units)
+        /// <param name="u">The unit to memoize paths for.</param>
+        public void calcUnitPaths(Unit u, List<Unit> enemies)
         {
-            clearAllPaths();
+            unitRef = new PathMemoizer(u);
+            enemyMemoizer.Clear();
 
-            if (team1Units.Count == 0 && team2Units.Count == 0)
-                return;
-            if (team1Units.Count == 0)
-                team1Type = !team2Units[0].isEnemy();
-            else
-                team1Type = team1Units[0].isEnemy();
-
-            foreach (Unit u in team1Units)
+            foreach (Unit e in enemies)
             {
-                team1.NodesCanWalkTo.Add(u, pathFinderRef.nodesWithinEnduranceValue(u.getNode(), u.getCurrentWater()));
-                team1.NodesInRange.Add(u, pathFinderRef.NodesInRangeOfNodes(team1.NodesCanWalkTo[u], u.getMinAttackRange(), u.getMinAttackRange()));
-                team1.CurrentTargets.Add(u, pathFinderRef.Targets(team1.NodesCanWalkTo[u], u.getMinAttackRange(), u.getMinAttackRange(), team1Type));
-            }
-            foreach (Unit u in team2Units)
-            {
-                team2.NodesCanWalkTo.Add(u, pathFinderRef.nodesWithinEnduranceValue(u.getNode(), u.getCurrentWater()));
-                team2.NodesInRange.Add(u, pathFinderRef.NodesInRangeOfNodes(team1.NodesCanWalkTo[u], u.getMinAttackRange(), u.getMinAttackRange()));
-                team2.CurrentTargets.Add(u, pathFinderRef.Targets(team2.NodesCanWalkTo[u], u.getMinAttackRange(), u.getMinAttackRange(), !team1Type));
+                enemyMemoizer.Add(e, new PathMemoizer(e));
             }
         }
-
+        
         /// <summary>
         /// Get the currently accessible nodes for a given unit.
         /// </summary>
@@ -90,10 +82,9 @@ namespace Graph
         /// <returns>The list of all accessible nodes.</returns>
         public List<Node> getAccessibleNodes(Unit u)
         {
-            if (u.isEnemy() == team1Type)
-                return team1.NodesCanWalkTo[u];
-            else
-                return team2.NodesCanWalkTo[u];
+            if (u.Equals(currentUnit))
+                return unitRef.getAccessibleNodes(u);
+            return enemyMemoizer[u].getAccessibleNodes(u);
         }
 
         /// <summary>
@@ -103,10 +94,9 @@ namespace Graph
         /// <returns>The list of all positions where we can attack an enemy unit from.</returns>
         public List<Node.NodePointer> getCurrentTargets(Unit u)
         {
-            if (u.isEnemy() == team1Type)
-                return team1.CurrentTargets[u];
-            else
-                return team2.CurrentTargets[u];
+            if (u.Equals(currentUnit))
+                return unitRef.getCurrentTargets(u);
+            return enemyMemoizer[u].getCurrentTargets(u);
         }
 
         /// <summary>
@@ -116,10 +106,9 @@ namespace Graph
         /// <returns>The list of all positions in range of unit.</returns>
         public List<Node> getNodesInRange(Unit u)
         {
-            if (u.isEnemy() == team1Type)
-                return team1.NodesInRange[u];
-            else
-                return team2.NodesInRange[u];
+            if (u.Equals(currentUnit))
+                return unitRef.getNodesInRange(u);
+            return enemyMemoizer[u].getNodesInRange(u);
         }
 
         /// <summary>
