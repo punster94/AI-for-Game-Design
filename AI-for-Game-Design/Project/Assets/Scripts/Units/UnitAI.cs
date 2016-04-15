@@ -15,6 +15,8 @@ class UnitAI
         pathManager = new PathManager(pathFinderRef);
     }
 
+    Unit subjectRef;
+
     /// <summary>
     /// Run AI for a unit, returning a UnitAction.
     /// </summary>
@@ -23,11 +25,36 @@ class UnitAI
     /// <returns>The best UnitAction to take.</returns>
     public UnitAction RunAI(Unit subject, List<Unit> subjectsEnemies)
     {
-        pathManager.calcUnitPaths(s, subjectsEnemies);
-        return null;
+        subjectRef = subject;
+
+        pathManager.calcUnitPaths(subjectRef, subjectsEnemies);
+
+        KeyValuePair<Result, UnitAction> MinMaxResult = MinMax();
+        switch (MinMaxResult.Key)
+        {
+            case Result.Success:
+                return MinMaxResult.Value;
+
+            case Result.NoUnitsFound:
+                KeyValuePair<Result, UnitAction> AttemptFind = FindUnit();
+
+                //We've won!
+                if (AttemptFind.Key == Result.NoUnitsFound)
+                {
+                    return UnitAction.DoNothing(subjectRef);
+                }
+                return AttemptFind.Value;
+
+            case Result.WillDie:
+                return RunAway();
+
+            default:
+                throw new InvalidProgramException("RunAI: MinMaxResult enum reached invalid state: " + MinMaxResult.Key);
+        }
     }
-    
-    private enum Result { Success = 0, NoUnitsInRange = 1, WillDie = 2}
+
+    //Internal enum for cleaner code.
+    private enum Result { Success = 0, NoUnitsFound = 1, WillDie = 2 }
 
     /// <summary>
     /// Runs MinMax on a unit.
@@ -35,12 +62,12 @@ class UnitAI
     /// <returns>A result-UnitAction pair.</returns>
     private KeyValuePair<Result, UnitAction> MinMax()
     {
-        return new KeyValuePair<Result, UnitAction>();
+        return new KeyValuePair<Result, UnitAction>(Result.WillDie, null);
     }
 
-    private UnitAction FindUnit()
+    private KeyValuePair<Result, UnitAction> FindUnit()
     {
-        return null;
+        return new KeyValuePair<Result, UnitAction>(Result.NoUnitsFound, null);
     }
 
     private UnitAction RunAway()
