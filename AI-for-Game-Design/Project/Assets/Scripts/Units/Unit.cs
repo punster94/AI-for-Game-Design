@@ -24,6 +24,13 @@ public abstract class Unit {
 	private bool hasNotMovedThisTurn = true;
 	public Transform transform;
 
+    public enum UnitStates
+    {
+        RunningAway, FindingUnit, Attacking
+    }
+
+    public UnitStates CurrentState { get; set; }
+
 	private int clay;
 	private int currentWater;
 	private int maxWater;
