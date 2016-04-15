@@ -22,6 +22,7 @@ public abstract class Unit {
 	// Fields for action control
 	private bool currentlySelected = false;
 	private bool hasNotMovedThisTurn = true;
+    private bool canUndo = true;
 	public Transform transform;
 
     public enum UnitStates
@@ -31,7 +32,11 @@ public abstract class Unit {
 
     public UnitStates CurrentState { get; set; }
 
-	private int clay;
+    private System.Action callbackFunction = UnitAction.DontCallBack;
+    private int storedCostOfMove;
+    private Node prevNode;
+
+    private int clay;
 	private int currentWater;
 	private int maxWater;
 	private int bendiness;
@@ -79,10 +84,49 @@ public abstract class Unit {
 		return Camera.main.ScreenToWorldPoint(Input.mousePosition);
 	}
 
-	/// <summary>
-	/// Updates the current seeking location.
-	/// </summary>
-	private void updateSeek() {
+    public void moveUnit(System.Action callBack, Node target) {
+        canUndo = true;
+        prevNode = getNode();
+        storedCostOfMove = 0;
+        callbackFunction = callBack;
+
+        //AStar pathfinding
+        targets.Clear();
+        Queue<Node> path = new Queue<Node>();
+        double cost = getPathFinder().AStar(path, getNode(), target);
+
+        if (cost > currentWater)
+            return;
+        foreach (Node n in path)
+            targets.Enqueue(new Vector2(n.getPos().x, n.getPos().y));
+
+        storedCostOfMove = (int)cost;
+        currentWater -= storedCostOfMove;
+        hasNotMovedThisTurn = false;
+    }
+
+    /// <summary>
+    /// Tries to undo an action. If successful, returns true, else false.
+    /// </summary>
+    /// <returns>If successful, returns true, else false.</returns>
+    public bool undoIfPossible() {
+        if (canUndo)
+        {
+            node = prevNode;
+            hasNotMovedThisTurn = true;
+            currentWater += storedCostOfMove;
+            callbackFunction = UnitAction.DontCallBack;
+            canUndo = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Updates the current seeking location.
+    /// </summary>
+    private void updateSeek() {
 		// Seek method
 		if(targets.Count > 0) {
 			Vector2 currentTarget = targets.Peek();
@@ -104,11 +148,14 @@ public abstract class Unit {
 					minDist = newDist + diffDist;
 			}
 
+            //Finished!
 			if(targets.Count == 0) {
 				Node newPosition = getPathFinder().closestMostValidNode(transform.position);
 				node.Occupier = null;
 				newPosition.Occupier = this;
 				node = newPosition;
+                
+                callbackFunction();
 			}
 		}
 	}
@@ -200,10 +247,10 @@ public abstract class Unit {
 		spriteObject = g;
 	}
 
-	// Takes the attack from an enemy unit, returning a list of attack results
-	public ArrayList takeAttackFrom(Unit enemy, int distance, bool firstAttack = true) {
+	// Takes the attack from an enemy unit, returning the counter-attack and attack results.
+	public List<AttackResult> takeAttackFrom(Unit enemy, int distance, bool firstAttack) {
 		Attack atk = new Attack(enemy, this);
-		ArrayList attacks = new ArrayList();
+		List<AttackResult> attacks = new List<AttackResult>();
 		AttackResult result = new AttackResult(HitType.Miss, 0, false);
 		AttackResult counter = new AttackResult(HitType.CannotCounter, 0, false);
 
@@ -223,13 +270,11 @@ public abstract class Unit {
 
 		if(clay <= 0)
 			result.setKilled(true);
-
-		
 		// Only counter if it is the first attack in a set and the enemy's range allows it
 		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance)
-			counter = (AttackResult) enemy.takeAttackFrom(this, 1)[0];
+			counter = enemy.takeAttackFrom(this, 1, false)[0];
 
-		// Add the main attack result first, then the counter result
+		// Add this enemy's result first, then the counter result
 		attacks.Add(result);
 		attacks.Add(counter);
 
@@ -237,8 +282,10 @@ public abstract class Unit {
 	}
 
 	// Attacks the given enemy Unit
-	public ArrayList attack(Unit enemy, int distance) {
-		return enemy.takeAttackFrom(this, distance);
+    // Removes undo capability since attack is non-reverseable.
+	public List<AttackResult> attack(Unit enemy, int distance) {
+        canUndo = false;
+		return enemy.takeAttackFrom(this, distance, true);
 	}
 
     public override int GetHashCode()
