@@ -639,8 +639,8 @@ namespace Graph
         /// <returns></returns>
         public float ManhattenHeuristic(Node startNode, Node endNode)
         {
-            float distX = Mathf.Abs(startNode.getGridPos().x - endNode.getGridPos().x);
-            float distY = Mathf.Abs(startNode.getGridPos().y - endNode.getGridPos().y);
+            int distX = Mathf.Abs(startNode.getGridPos().x - endNode.getGridPos().x);
+            int distY = Mathf.Abs(startNode.getGridPos().y - endNode.getGridPos().y);
 
             return distX + distY;
         }
@@ -830,7 +830,7 @@ namespace Graph
                 {
                     if (!x.isWalkable() || !x.Occupied || x.Occupier.isEnemy() == friendType)
                         return false;
-                    targetList.Add(new Node.NodePointer(capture, x, DiagonalHeuristic(n, x)));
+                    targetList.Add(new Node.NodePointer(capture, x, (int)x.realCost));
                     return false;
                 };
                 runFuncOnAllNodesInRangeOfNode(targetFunc, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);

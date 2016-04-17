@@ -20,6 +20,7 @@ public class Attack {
 	}
 
 	// Calculates the damage, hit chance and critical chance of an attack from one unit to another
+    // Goal to max attack: maximize water.
 	public Attack(Unit attacker, Unit defender) {
 		damage = Mathf.Max(attacker.getClay() - defender.getHardness(), 0);
 		hitChance = Mathf.Min((attacker.getCurrentWater() - defender.getBendiness()) / defender.getBendiness(), 1.0f);

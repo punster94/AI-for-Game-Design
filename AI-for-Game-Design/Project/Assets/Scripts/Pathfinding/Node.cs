@@ -21,8 +21,8 @@ namespace Graph
         public class NodePointer
         {
             Node start, finish;
-            float distance;
-            public NodePointer(Node from, Node target, float dist)
+            int distance;
+            public NodePointer(Node from, Node target, int dist)
             {
                 start = from;
                 finish = target;
@@ -39,7 +39,7 @@ namespace Graph
                 return start;
             }
 
-            public float getDist()
+            public int getDist()
             {
                 return distance;
             }
@@ -414,6 +414,19 @@ namespace Graph
 #if DEBUG_NODE_TEXT
             Object.Destroy(visNodeNum.gameObject);
 #endif
+        }
+        
+        public static int range(Node a, Node b)
+        {
+            int rX = a.getGridPos().x - b.getGridPos().x;
+            int rY = a.getGridPos().y - b.getGridPos().y;
+
+            if (rX < 0)
+                rX = -rX;
+            if (rY < 0)
+                rY = -rY;
+
+            return rX + rY;
         }
     }
 }

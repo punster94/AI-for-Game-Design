@@ -56,8 +56,7 @@ class UnitAction
     {
         if (enemyUnit != null)
         {
-            //TODO: fix distance
-            List<AttackResult> attackResults = unitRef.attack(enemyUnit, 0);
+            unitRef.attack(enemyUnit, Node.range(unitRef.getNode(), enemyUnit.getNode());
         }
         
         if (callbackFuncOnDone != null)
