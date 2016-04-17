@@ -74,7 +74,12 @@ namespace Graph
                 enemyMemoizer.Add(e, new PathMemoizer(e));
             }
         }
-        
+
+        internal bool canAttack(Unit enemy, Node candidateMove)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Get the currently accessible nodes for a given unit.
         /// </summary>
@@ -99,6 +104,11 @@ namespace Graph
             return enemyMemoizer[u].getCurrentTargets(u);
         }
 
+        internal int maxDamageMoveCost(Unit enemy, Node node)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Get the current list of nodes in range for a given unit.
         /// </summary>
@@ -109,6 +119,15 @@ namespace Graph
             if (u.Equals(currentUnit))
                 return unitRef.getNodesInRange(u);
             return enemyMemoizer[u].getNodesInRange(u);
+        }
+
+        public Node getClosestNode(Unit u, Predicate<Node> satisfies)
+        {
+            List<Node> nodeList = pathFinderRef.nodesThatSatisfyPred(u.getNode(), satisfies, float.PositiveInfinity, true);
+            if (nodeList.Count > 0)
+                return nodeList[0];
+            else
+                return null;
         }
 
         /// <summary>
@@ -124,6 +143,11 @@ namespace Graph
                 return team1.NodesInRangeSet[u];
             else
                 return team2.NodesInRangeSet[u];*/
+        }
+
+        internal bool inPaths(Unit subjectRef, Node node)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -181,7 +181,6 @@ public abstract class Unit {
 		return (v1.x * v2.y - v2.x * v1.y) < 0;
 	}
 
-	//TODO: Let's remove the dependence on x and y by passing in a Node. We should discuss how the main game should have access to Node objects in the nodeArr.
 	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, Node gridTile, bool e) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
@@ -287,6 +286,24 @@ public abstract class Unit {
         canUndo = false;
 		return enemy.takeAttackFrom(this, distance, true);
 	}
+
+    /// <summary>
+    /// Sets the clay to this value.
+    /// </summary>
+    /// <param name="clayVal"></param>
+    public void setClay(int clayVal)
+    {
+        clay = clayVal;
+    }
+
+    /// <summary>
+    /// Sets the currentWater to this value.
+    /// </summary>
+    /// <param name="endurance"></param>
+    public void setCurrentWater(int endurance)
+    {
+        currentWater = endurance;
+    }
 
     public override int GetHashCode()
     {
