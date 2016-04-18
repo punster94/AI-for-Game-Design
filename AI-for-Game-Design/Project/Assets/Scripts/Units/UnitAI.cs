@@ -28,13 +28,14 @@ class UnitAI
         subjectsEnemiesRef = subjectsEnemies;
 
         pathManager.calcUnitPaths(subjectRef, subjectsEnemies);
-
+        
         KeyValuePair<Result, UnitAction> MinMaxResult = MinMax();
         switch (MinMaxResult.Key)
         {
             case Result.Success:
                 return MinMaxResult.Value;
 
+            // Nothing in range.
             case Result.NothingFound:
                 KeyValuePair<Result, UnitAction> AttemptFind = FindUnit();
 
@@ -45,6 +46,8 @@ class UnitAI
                 }
                 return AttemptFind.Value;
 
+            // Note that even if we can attack from the running position, we don't while running,
+            // as we know we can die then.
             case Result.WillDie:
                 KeyValuePair<Result, UnitAction> runTo = RunAway();
 
@@ -126,7 +129,7 @@ class UnitAI
             // enqueue move! min pri queue, so invert answer.
             else
                 bestMoves.Enqueue(roundMove, -((double)totDmg / subjectRef.getClay()));
-
+            
             util.resetBack();
         }
 
@@ -152,7 +155,7 @@ class UnitAI
         Node goTo = null;
 
         // go to farthest path.
-        while (path.Count > 0 && pathManager.inPaths(subjectRef, path.Peek()))
+        while (path.Count > 0 && pathManager.canWalkTo(subjectRef, path.Peek()))
             goTo = path.Dequeue();
 
         UnitAction moveCloserToClosestEnemy = new UnitAction(subjectRef, null, goTo);

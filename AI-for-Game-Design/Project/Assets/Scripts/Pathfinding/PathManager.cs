@@ -19,7 +19,7 @@ namespace Graph
             private List<Node.NodePointer> currentTargets;
             private readonly Unit uRef;
 
-            public PathMemoizer(Unit unitRef)
+            public PathMemoizer(PathFinder p, Unit unitRef)
             {
                 uRef = unitRef;
 
@@ -28,20 +28,30 @@ namespace Graph
                 nodesInRangeSet = new HashSet<Node>();
                 currentTargets = new List<Node.NodePointer>();
 
-                //TODO: Add logic here.
+                throw new NotImplementedException();
             }
 
             internal List<Node> getAccessibleNodes(Unit u)
             {
-                throw new NotImplementedException();
+                return nodesCanWalkTo;
             }
 
             internal List<Node> getNodesInRange(Unit u)
             {
-                throw new NotImplementedException();
+                return nodesInRange;
             }
 
             internal List<Node.NodePointer> getCurrentTargets(Unit u)
+            {
+                return currentTargets;
+            }
+
+            internal HashSet<Node> getNodesInRangeSet()
+            {
+                return nodesInRangeSet;
+            }
+
+            internal HashSet<Node> getAccessibleNodesSet()
             {
                 throw new NotImplementedException();
             }
@@ -66,18 +76,20 @@ namespace Graph
         /// <param name="u">The unit to memoize paths for.</param>
         public void calcUnitPaths(Unit u, List<Unit> enemies)
         {
-            unitRef = new PathMemoizer(u);
+            unitRef = new PathMemoizer(pathFinderRef, u);
             enemyMemoizer.Clear();
 
             foreach (Unit e in enemies)
             {
-                enemyMemoizer.Add(e, new PathMemoizer(e));
+                enemyMemoizer.Add(e, new PathMemoizer(pathFinderRef, e));
             }
         }
 
-        internal bool canAttack(Unit enemy, Node candidateMove)
+        internal bool canAttack(Unit u, Node candidateMove)
         {
-            throw new NotImplementedException();
+            if (u.Equals(currentUnit))
+                return unitRef.getNodesInRangeSet().Contains(candidateMove);
+            return enemyMemoizer[u].getNodesInRangeSet().Contains(candidateMove);
         }
 
         /// <summary>
@@ -104,7 +116,10 @@ namespace Graph
             return enemyMemoizer[u].getCurrentTargets(u);
         }
 
-        internal int maxDamageMoveCost(Unit enemy, Node node)
+        /// <summary>
+        /// Returns the move cost of the maximum damage move (closest move that can attack a square, actually).
+        /// </summary>
+        internal int maxDamageMoveCost(Unit u, Node node)
         {
             throw new NotImplementedException();
         }
@@ -121,6 +136,9 @@ namespace Graph
             return enemyMemoizer[u].getNodesInRange(u);
         }
 
+        /// <summary>
+        /// Does Dijkstra to find the first thing that satisfies a pred, returns null if nothing found.
+        /// </summary>
         public Node getClosestNode(Unit u, Predicate<Node> satisfies)
         {
             List<Node> nodeList = pathFinderRef.nodesThatSatisfyPred(u.getNode(), satisfies, float.PositiveInfinity, true);
@@ -131,23 +149,13 @@ namespace Graph
         }
 
         /// <summary>
-        /// Get the current list of nodes in range for a given unit.
+        /// Returns true if a unit can walk to the given node with current endurance values.
         /// </summary>
-        /// <param name="u">Unit to query.</param>
-        /// <returns>The set of all positions attackable.</returns>
-        public HashSet<Node> getNodesInRangeSet(Unit u)
+        internal bool canWalkTo(Unit u, Node node)
         {
-            throw new NotImplementedException("getNodesInRangeSet");
-            /*
-            if (u.isEnemy() == team1Type)
-                return team1.NodesInRangeSet[u];
-            else
-                return team2.NodesInRangeSet[u];*/
-        }
-
-        internal bool inPaths(Unit subjectRef, Node node)
-        {
-            throw new NotImplementedException();
+            if (u.Equals(currentUnit))
+                return unitRef.getAccessibleNodesSet().Contains(node);
+            return enemyMemoizer[u].getAccessibleNodesSet().Contains(node);
         }
     }
 }

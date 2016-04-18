@@ -1185,5 +1185,15 @@ namespace Graph
 
             return new Vector2(x, y);
         }
+
+        public Vector2 getTopRightBound()
+        {
+            return upperRightBound;
+        }
+
+        public Vector2 getBottomLeftBound()
+        {
+            return lowerLeftBound;
+        }
     }
 }
