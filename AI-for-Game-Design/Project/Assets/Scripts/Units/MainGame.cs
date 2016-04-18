@@ -15,9 +15,7 @@ public class MainGame : MonoBehaviour {
 
 	PathFinder pathFinder;
 	GraphManager pathManager;
-
-	Unit currentlySelectedUnit = null;
-	bool unitSelected = false;
+    TurnManager turnManager;
 
 	// Use this for initialization
 	void Start() {
@@ -45,6 +43,8 @@ public class MainGame : MonoBehaviour {
 			addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
 			addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
         }
+
+        turnManager = new TurnManager(pathFinder);
 	}
 
 	void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy) {
@@ -53,45 +53,9 @@ public class MainGame : MonoBehaviour {
 		node.Occupier = newUnit;
 		newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
 	}
-
-    bool turn = true;
 	
 	// Update is called once per frame
 	void Update() {
-		if(Input.GetMouseButtonDown((int)MouseButton.left)) {
-			Vector2 position = getMousePos();
-
-			if(clickInGraph(position)) {
-				Node clickedNode = pathFinder.closestMostValidNode(position);
-
-				if(unitSelected) {
-					currentlySelectedUnit.deselect();
-					unitSelected = false;
-				}
-				
-				if(clickedNode.Occupied) {
-					currentlySelectedUnit = clickedNode.Occupier;
-					currentlySelectedUnit.select();
-					unitSelected = true;
-					pathFinder.displayRangeOfUnit(currentlySelectedUnit, position);
-				}
-                else {
-                    pathFinder.clearRangeDisplay();
-                }
-			}
-		}
-        if (Input.GetMouseButtonDown((int)MouseButton.right))
-            pathFinder.clearRangeDisplay();
-	}
-
-	private bool clickInGraph(Vector2 position) {
-		// TODO: Base these comparisons on the values the MainGame object will specify as the bounding box of the graph
-		//if(position.x > && position.x <  && position.y > && position.y < )
-			return true;
-		//return false;
-	}
-
-	private Vector2 getMousePos() {
-		return Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        turnManager.Update();
 	}
 }

@@ -51,6 +51,7 @@ public abstract class Unit {
 	// TODO: Make a check to only path to a spot that is in range AND unoccupied
 	// TODO: We also want to make sure the user can undo moves before completely committing to them
 	public void Update() {
+        // TODO: Remove this logic, replace with only updateSeek();
 		if(currentlySelected && hasNotMovedThisTurn) {
 			if(Input.GetMouseButtonDown((int)MouseButton.right)) {
 				//AStar pathfinding
@@ -181,6 +182,8 @@ public abstract class Unit {
 		return (v1.x * v2.y - v2.x * v1.y) < 0;
 	}
 
+    public abstract string name();
+
 	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, Node gridTile, bool e) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
@@ -235,11 +238,14 @@ public abstract class Unit {
 	}
 
 	public void select() {
+        UIManager.getUIManager().setDisplayedUnit(this);
 		currentlySelected = true;
 	}
 
-	public void deselect() {
-		currentlySelected = false;
+	public void deselect()
+    {
+        UIManager.getUIManager().clearDisplay();
+        currentlySelected = false;
 	}
 
 	public void setSpriteObject(GameObject g) {

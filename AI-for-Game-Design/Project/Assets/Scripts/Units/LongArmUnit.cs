@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using Graph;
+using System;
 
 public class LongArmUnit : Unit {
 
@@ -20,13 +21,18 @@ public class LongArmUnit : Unit {
 		if(isEnemy)
 			g.GetComponent<SpriteRenderer>().color = new Color(200f, 0f, 0f);
 	}
-
+    
 
 	public void die() {
 		Debug.Log("I, the LongArmUnit, died. Bleh.");
 	}
 
-	private void updateAnimation() {
+    public override string name()
+    {
+        return "Long Armed Unit";
+    }
+
+    private void updateAnimation() {
 		animationFrame += 1;
 		animationFrame %= framesInAnimation;
 

@@ -56,7 +56,7 @@ class UnitAction
     {
         if (enemyUnit != null)
         {
-            unitRef.attack(enemyUnit, Node.range(unitRef.getNode(), enemyUnit.getNode());
+            unitRef.attack(enemyUnit, Node.range(unitRef.getNode(), enemyUnit.getNode()));
         }
         
         if (callbackFuncOnDone != null)
