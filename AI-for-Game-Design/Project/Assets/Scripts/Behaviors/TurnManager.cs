@@ -67,11 +67,13 @@ class TurnManager
         return Camera.main.ScreenToWorldPoint(Input.mousePosition);
     }
 
-    private bool clickInGraph(Vector2 position)
+    private bool clickInGraph(Vector2 realPos)
     {
-        //TODO: fix bounding box issues with bottom left & top right edges of map
         Vector2 botLeft = pathFinder.getBottomLeftBound();
         Vector2 upRight = pathFinder.getTopRightBound();
+
+        //NOTE: NOT the same as directly doing it, think integer division.
+        Vector2 position = pathFinder.ArrPosToWorldSpace(pathFinder.WorldSpaceToArrPos(realPos));
         return position.x >= botLeft.x && position.y >= botLeft.y
             && position.x <= upRight.x && position.y <= upRight.y;
     }

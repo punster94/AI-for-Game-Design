@@ -19,7 +19,7 @@ namespace Graph
             self = new GameObject(PathManagerTag);
             self.transform.parent = parent.transform;
             graph = self.AddComponent<PathFinder>();
-            graph.initializeGraph(new Vector2(-26, -16), new Vector2(26, 16), 1.0f, 0.75f);
+            graph.initializeGraph(new Vector2(-26, -17), new Vector2(25, 15), 1.0f, 0.75f);
         }
 
         public PathFinder getGraph()
