@@ -1161,7 +1161,7 @@ namespace Graph
         /// </summary>
         /// <param name="pos">The position in world space.</param>
         /// <returns>The position in array space.</returns>
-        private IntVec2 WorldSpaceToArrPos(Vector2 pos)
+        public IntVec2 WorldSpaceToArrPos(Vector2 pos)
         {
             float x = pos.x - lowerLeftBound.x;
             float y = pos.y - lowerLeftBound.y;
@@ -1176,7 +1176,7 @@ namespace Graph
         /// </summary>
         /// <param name="pos">The position in array space.</param>
         /// <returns>The position in world space.</returns>
-        private Vector2 ArrPosToWorldSpace(IntVec2 pos)
+        public Vector2 ArrPosToWorldSpace(IntVec2 pos)
         {
             float x = pos.x / nodeDensity;
             float y = pos.y / nodeDensity;
