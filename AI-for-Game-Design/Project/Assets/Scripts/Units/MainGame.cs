@@ -37,7 +37,7 @@ public class MainGame : MonoBehaviour {
         Vector2 topright = pathFinder.getTopRightBound();
         Vector2 botleft = pathFinder.getBottomLeftBound();
         Vector2 mid = topright - botleft;
-        mid /= 4;
+        mid /= 3;
         KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 5);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
@@ -47,8 +47,6 @@ public class MainGame : MonoBehaviour {
 			addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
 			addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
         }
-
-        enemyUnits.Reverse();
 
         turnManager = new TurnManager(pathFinder, allyUnits, enemyUnits);
 	}
