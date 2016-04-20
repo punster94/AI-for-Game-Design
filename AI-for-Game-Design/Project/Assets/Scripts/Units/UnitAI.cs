@@ -172,8 +172,8 @@ class UnitAI
 
         Queue<Node> path = new Queue<Node>();
         pathFinderRef.AStar(path, subjectRef.getNode(), closestEnemyNode, closestEnemyNode);
-
-        Node goTo = null;
+        
+        Node goTo = subjectRef.getNode();
 
         // go to farthest path.
         while (path.Count > 0 && pathManager.canWalkTo(subjectRef, path.Peek()))

@@ -655,7 +655,7 @@ namespace Graph
         {
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            initializePathfinding(false);
+            initializePathfinding(true);
             if (toIgnore != null)
                 toIgnore.Visited = false;
 

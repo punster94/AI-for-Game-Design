@@ -44,15 +44,22 @@ class TurnManager
         moving = true;
     }
 
-    public void finishedAttackCallback()
+    public void finishedMoveCallbackAI()
     {
         List<AttackResult> ars = currentAction.Attack(UnitAction.DontCallBack);
+        bool weDied = false;
+
         foreach (AttackResult ar in ars)
         {
             Debug.Log("died: " + ar.ToString());
             if (ar.wasKilled())
             {
                 Unit died = ar.target();
+                if (died.Equals(currentAIUnit))
+                {
+                    UIManager.getUIManager().clearDisplay();
+                    weDied = true;
+                }
                 if (died.isEnemy())
                 {
                     aiUnits.Remove(died);
@@ -64,11 +71,32 @@ class TurnManager
                 died.Die();
             }
         }
+        // turn ended
+        if (toActAI.Count == 0)
+        {
+            aiTurn = !aiTurn;
+            if (aiTurn)
+                nextTurn(aiUnits);
+            else
+                nextTurn(playerUnits);
+        }
+        if (!weDied)
+        {
+            UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+            pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
+        }
+
+        if (ars.Count > 0)
+            delayTime = 37;
+        else
+            delayTime = 3;
         moving = false;
     }
 
     // TODO: make attack not instant
+    int delayTime = 0;
     UnitAction currentAction;
+    Unit currentAIUnit;
     Queue<Unit> toActAI;
     
 
@@ -80,7 +108,7 @@ class TurnManager
 
     public void Update()
     {
-        if (!moving)
+        if (delayTime <= 0 && !moving)
         {
             if (aiTurn && toActAI.Count == 0)
             {
@@ -92,26 +120,23 @@ class TurnManager
                 if (toActAI.Count == 0)
                 {
                     moving = true;
+                    UIManager.getUIManager().clearDisplay();
+                    pathFinder.clearRangeDisplay();
                     return;
                 }
             }
 
             if (aiTurn)
             {
-                Unit currentAIUnit = toActAI.Dequeue();
+                currentAIUnit = toActAI.Dequeue();
                 UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
-                // turn ended
-                if (toActAI.Count == 0)
-                {
-                    aiTurn = false;
-                    nextTurn(playerUnits);
-                }
+                pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
 
                 currentAction = ai.RunAI(currentAIUnit, playerUnits);
                 UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
 
                 lockMovement();
-                currentAction.Move(finishedAttackCallback);
+                currentAction.Move(finishedMoveCallbackAI);
             }
 
             if (!aiTurn && toActAI.Count == 0)
@@ -124,26 +149,23 @@ class TurnManager
                 if (toActAI.Count == 0)
                 {
                     moving = true;
+                    UIManager.getUIManager().clearDisplay();
+                    pathFinder.clearRangeDisplay();
                     return;
                 }
             }
 
             if (!aiTurn)
             {
-                Unit currentAIUnit = toActAI.Dequeue();
+                currentAIUnit = toActAI.Dequeue();
                 UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
-                // turn ended
-                if (toActAI.Count == 0)
-                {
-                    aiTurn = true;
-                    nextTurn(aiUnits);
-                }
+                pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
 
                 currentAction = ai.RunAI(currentAIUnit, aiUnits);
                 UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
 
                 lockMovement();
-                currentAction.Move(finishedAttackCallback);
+                currentAction.Move(finishedMoveCallbackAI);
             }
             else
             {
@@ -195,7 +217,8 @@ class TurnManager
             // disables all buttons while locked
             selectionState = State.EnemyTurn;
 
-
+            if (delayTime > 0)
+                delayTime--;
         }
 
         UIManager.getUIManager().ChangeButtonState(selectionState);

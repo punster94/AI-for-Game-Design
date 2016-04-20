@@ -37,6 +37,8 @@ class UnitAction
         unitRef = subject;
         enemyUnit = enemyToAttack;
         moveNode = movePosition;
+        if (movePosition == null)
+            throw new ArgumentNullException("unit action null movenode");
     }
 
     /// <summary>
@@ -72,9 +74,10 @@ class UnitAction
     /// <param name="callbackFuncOnDone">The void action to run when done.</param>
     public void Move(Action callbackFuncOnDone)
     {
+        // TODO: fix null movenode
         if (callbackFuncOnDone != null)
             unitRef.moveUnit(callbackFuncOnDone, moveNode);
         else
-            unitRef.moveUnit(callbackFuncOnDone, moveNode);
+            unitRef.moveUnit(DontCallBack, moveNode);
     }
 }

@@ -34,7 +34,8 @@ public class Attack {
         def = defender;
 		damage = Mathf.Max(attacker.getClay() - defender.getHardness(), 0);
         // TODO: water: fix this to be more balanced.
-		hitChance = Mathf.Min((attacker.getMaxWater() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
+        float waterVal = Mathf.Max(attacker.getMaxWater() / 2, attacker.getCurrentWater());
+		hitChance = Mathf.Min((waterVal - defender.getBendiness()) / defender.getBendiness(), 1.0f);
 		critChance = Mathf.Min((attacker.getBendiness() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
 	}
     
