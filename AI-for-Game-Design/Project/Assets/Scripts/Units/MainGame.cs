@@ -29,7 +29,10 @@ public class MainGame : MonoBehaviour {
 		enemyUnitObjects.transform.parent = parent.transform;
 		allyUnitObjects.transform.parent = parent.transform;
 
-        pathManager = new GraphManager(parent);
+        // pathManager = new GraphManager(parent);
+		PCG generator = new PCG();
+		pathManager = new GraphManager(parent, generator.generateMap());
+
         pathFinder = pathManager.getGraph();
 
         //TODO: Integrate PCG here

@@ -164,7 +164,7 @@ namespace Graph
             numYNodes = terrainArr.Length;
 
             // Determine correct node density
-            float xDist = lowerLeftBound.x - upperRightBound.x;
+            float xDist = upperRightBound.x - lowerLeftBound.x;
             nodeDensity = numXNodes / xDist;
 
             // Magic number allows for proper drawing of nodes.
