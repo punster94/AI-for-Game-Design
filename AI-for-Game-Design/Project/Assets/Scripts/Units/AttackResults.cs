@@ -16,11 +16,6 @@ public class AttackResult {
 		damageTaken = d;
 		killed = k;
         atk = atkRef;
-        if (atkRef != null)
-        {
-            Debug.Log("attacking " + atkRef.getDefender().ident() + " " + atkRef.getDefender().isEnemy() + " did " + damageTaken + " , cur clay=" + atkRef.getDefender().getClay() + " , waskilled = " + killed);
-            Debug.Log("other side " + atkRef.getAttacker().ident() + " " + atkRef.getDefender().isEnemy() + " did " + damageTaken + " , cur clay=" + atkRef.getAttacker().getClay());
-        }
 	}
     
     public Unit target()
@@ -53,4 +48,12 @@ public class AttackResult {
 	public void setKilled(bool k) {
 		killed = k;
 	}
+
+    public override string ToString()
+    {
+        if (atk != null)
+            return ("attacking " + atk.getDefender().ident() + " " + (atk.getDefender().isEnemy() ? "AI" : "player") + " had " + damageTaken + " , cur clay=" + atk.getDefender().getClay() + " , waskilled = " + killed
+                + " other side " + atk.getAttacker().ident() + " " + (atk.getAttacker().isEnemy() ? "AI" : "player") + " , cur clay=" + atk.getAttacker().getClay());
+        return "";
+    }
 }

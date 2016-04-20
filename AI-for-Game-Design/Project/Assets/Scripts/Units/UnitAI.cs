@@ -28,8 +28,12 @@ class UnitAI
         subjectsEnemiesRef = subjectsEnemies;
 
         pathManager.calcUnitPaths(subjectRef, subjectsEnemies);
+
+        int sanityCheck = subjectRef.getClay();
         
         KeyValuePair<Result, UnitAction> MinMaxResult = MinMax();
+        if (subjectRef.getClay() != sanityCheck)
+            UnityEngine.Debug.Log("ERROR IN MINMAX AGAIN!");
         switch (MinMaxResult.Key)
         {
             case Result.Success:
@@ -91,7 +95,8 @@ class UnitAI
             int totDmg = 0;
 
             // Will very likely die, enqueue this move as bad, and don't move to next step.
-            if (util.attackerDies())
+            //TODO: utility = 0
+            if (util.attackerDies() || util.getUtility() == 0)
             {
                 bestMoves.Enqueue(roundMove, double.PositiveInfinity);
                 util.resetBack();

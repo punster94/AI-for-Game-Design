@@ -263,41 +263,62 @@ public abstract class Unit {
 	// Takes the attack from an enemy unit, returning the counter-attack and attack results.
     // TODO: fix this weird attack problem
     // on counters it attacks itself?
-	public List<AttackResult> takeAttackFrom(Unit enemy, int distance, bool firstAttack) {
-		Attack atk = new Attack(enemy, this);
-		List<AttackResult> attacks = new List<AttackResult>();
+	public List<AttackResult> takeAttackFrom(Unit enemy, int distance, bool firstAttack)
+    {
+        Attack atk = new Attack(enemy, this);
+
+        List<AttackResult> attacks = new List<AttackResult>();
 		AttackResult result = new AttackResult(HitType.Miss, 0, false, atk);
 		AttackResult counter = new AttackResult(HitType.CannotCounter, 0, false);
 
-		if(Random.value <= atk.getHitChance()) {
-			result.setType(HitType.Hit);
-			result.setDamageTaken(atk.getDamage());
+        string statStr = "stats1 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
+        statStr += "\nstats1 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
+        statStr += "\nAttack info: " + atk;
+        Debug.Log(statStr);
 
-			if(Random.value <= atk.getCritChance()) {
-				clay -= (3 * atk.getDamage());
+        Debug.Log("taking attack from: " + ident() + ", enemy doing this: " + enemy.ident());
+        string playType = (isEnemy()) ? "enemy" : "player";
 
-				result.setType(HitType.Crit);
-				result.setDamageTaken(3 * atk.getDamage());
-			}
-			else
-				clay -= atk.getDamage();
-		}
+        if (Random.value <= atk.getHitChance())
+        {
+            result.setType(HitType.Hit);
+            result.setDamageTaken(atk.getDamage());
+
+            Debug.Log(playType + " was Hit!");
+
+            if (Random.value <= atk.getCritChance())
+            {
+                clay -= (3 * atk.getDamage());
+
+                result.setType(HitType.Crit);
+                result.setDamageTaken(3 * atk.getDamage());
+                Debug.Log("Crit!");
+            }
+            else
+                clay -= atk.getDamage();
+        }
+        else
+            Debug.Log(playType + " was Missed!");
 
 		if(clay <= 0)
 			result.setKilled(true);
 		// Only counter if it is the first attack in a set and the enemy's range allows it
 		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance)
-			counter = enemy.takeAttackFrom(this, 1, false)[0];
+			counter = enemy.takeAttackFrom(this, distance, false)[0];
 
 		// Add this enemy's result first, then the counter result
 		attacks.Add(result);
 		attacks.Add(counter);
 
-		return attacks;
+        statStr = "\nstats2 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
+        statStr += "\nstats2 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
+        Debug.Log(statStr);
+        return attacks;
 	}
 
     public void Die()
     {
+        node.Occupier = null;
         Object.Destroy(spriteObject);
     }
 

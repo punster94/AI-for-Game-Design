@@ -33,12 +33,20 @@ public class Attack {
         atk = attacker;
         def = defender;
 		damage = Mathf.Max(attacker.getClay() - defender.getHardness(), 0);
-		hitChance = Mathf.Min((attacker.getCurrentWater() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
+        // TODO: water: fix this to be more balanced.
+		hitChance = Mathf.Min((attacker.getMaxWater() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
 		critChance = Mathf.Min((attacker.getBendiness() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
 	}
     
     public Unit getAttacker()
     {
         return atk;
+    }
+
+    public override string ToString()
+    {
+        float ev = getDamage() * (1 - getCritChance()) + 3 * getDamage() * getCritChance();
+        ev *= getHitChance();
+        return "Damage: " + damage + ", hitChance: " + hitChance + ", critChance: " + critChance + ", ev: " + ev;
     }
 }

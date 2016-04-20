@@ -47,17 +47,23 @@ class TurnManager
     public void finishedAttackCallback()
     {
         List<AttackResult> ars = currentAction.Attack(UnitAction.DontCallBack);
-        foreach(AttackResult ar in ars)
+        foreach (AttackResult ar in ars)
+        {
+            Debug.Log("died: " + ar.ToString());
             if (ar.wasKilled())
             {
                 Unit died = ar.target();
                 if (died.isEnemy())
+                {
                     aiUnits.Remove(died);
+                }
                 else
+                {
                     playerUnits.Remove(died);
+                }
                 died.Die();
-                aiTurn = false;
             }
+        }
         moving = false;
     }
 
@@ -83,7 +89,11 @@ class TurnManager
                 foreach (Unit unit in aiUnits)
                     toActAI.Enqueue(unit);
 
-                UIManager.getUIManager().setDisplayedUnit(playerUnits[playerUnits.Count - 1]);
+                if (toActAI.Count == 0)
+                {
+                    moving = true;
+                    return;
+                }
             }
 
             if (aiTurn)
@@ -93,11 +103,43 @@ class TurnManager
                 // turn ended
                 if (toActAI.Count == 0)
                 {
-                    //aiTurn = false;
-                    nextTurn(aiUnits);
+                    aiTurn = false;
+                    nextTurn(playerUnits);
                 }
 
                 currentAction = ai.RunAI(currentAIUnit, playerUnits);
+                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+
+                lockMovement();
+                currentAction.Move(finishedAttackCallback);
+            }
+
+            if (!aiTurn && toActAI.Count == 0)
+            {
+                selectionState = State.EnemyTurn;
+
+                foreach (Unit unit in playerUnits)
+                    toActAI.Enqueue(unit);
+
+                if (toActAI.Count == 0)
+                {
+                    moving = true;
+                    return;
+                }
+            }
+
+            if (!aiTurn)
+            {
+                Unit currentAIUnit = toActAI.Dequeue();
+                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+                // turn ended
+                if (toActAI.Count == 0)
+                {
+                    aiTurn = true;
+                    nextTurn(aiUnits);
+                }
+
+                currentAction = ai.RunAI(currentAIUnit, aiUnits);
                 UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
 
                 lockMovement();
