@@ -51,23 +51,6 @@ public abstract class Unit {
 	// TODO: Make a check to only path to a spot that is in range AND unoccupied
 	// TODO: We also want to make sure the user can undo moves before completely committing to them
 	public void Update() {
-        /*
-        // TODO: Remove this logic, replace with only updateSeek();
-		if(currentlySelected && hasNotMovedThisTurn) {
-			if(Input.GetMouseButtonDown((int)MouseButton.right)) {
-				//AStar pathfinding
-				targets.Clear();
-				Queue<Node> path = new Queue<Node>();
-				double cost = getPathFinder().AStar(path, transform.position, getMousePos());
-                if (cost > currentWater)
-                    return;
-				foreach(Node n in path)
-					targets.Enqueue(new Vector2 (n.getPos().x, n.getPos().y));
-                currentWater -= (int) cost;
-				//hasNotMovedThisTurn = false;
-			}
-		}*/
-
 		updateSeek();
 	}
 
@@ -115,6 +98,22 @@ public abstract class Unit {
         canUndo = false;
         callbackFunction = UnitAction.DontCallBack;
     }
+    
+    // if it has acted, it can't undo.
+    public bool hasActed()
+    {
+        return !(canUndo || hasNotMovedThisTurn);
+    }
+
+    public void hasActed(bool ha)
+    {
+        canUndo = !ha;
+    }
+
+    public bool hasMoved()
+    {
+        return !hasNotMovedThisTurn;
+    }
 
     /// <summary>
     /// Tries to undo an action. If successful, returns true, else false.
@@ -123,7 +122,10 @@ public abstract class Unit {
     public bool undoIfPossible() {
         if (canUndo)
         {
+            node.Occupier = null;
             node = prevNode;
+            node.Occupier = this;
+            transform.position = node.getPos();
             hasNotMovedThisTurn = true;
             currentWater += storedCostOfMove;
             callbackFunction = UnitAction.DontCallBack;
@@ -314,7 +316,8 @@ public abstract class Unit {
 
 		// Add this enemy's result first, then the counter result
 		attacks.Add(result);
-		attacks.Add(counter);
+        if (counter.getType() != HitType.CannotCounter)
+		    attacks.Add(counter);
 
         statStr = "\nstats2 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
         statStr += "\nstats2 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;

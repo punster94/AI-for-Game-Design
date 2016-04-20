@@ -27,16 +27,45 @@ class TurnManager
         Cancel = UIManager.getUIManager().getCancelButton();
         Wait = UIManager.getUIManager().getWaitButton();
 
-        selectionState = State.OurTurnNoSelection;
+        NextTurn.onClick.AddListener(onNextTurn);
+        Cancel.onClick.AddListener(onCancel);
+        Wait.onClick.AddListener(onWait);
+
+        selectionState = State.UnitFresh;
         UIManager.getUIManager().ChangeButtonState(selectionState);
 
         toActAI = new Queue<Unit>();
     }
+
+    void onNextTurn()
+    {
+        selectionState = State.EnemyTurn;
+        UIManager.getUIManager().ChangeButtonState(selectionState);
+        aiTurn = true;
+        // Add remaining units to queue that have not moved
+    }
+
+    void onCancel()
+    {
+        selectionState = State.UnitFresh;
+        UIManager.getUIManager().ChangeButtonState(selectionState);
+        unitSelected = true;
+        workingUnit.undoIfPossible();
+        wipeDisplay();
+        displayCurrentUnit(workingUnit);
+    }
+ 
+    void onWait()
+    {
+        selectionState = State.UnitActed;
+        unitSelected = false;
+        UIManager.getUIManager().ChangeButtonState(selectionState);
+        workingUnit.hasActed(true);
+    }
     
-    Unit currentlySelectedUnit = null;
     bool unitSelected = false;
 
-    bool aiTurn = true;
+    bool aiTurn = false;
     bool moving = false;
 
     public void lockMovement()
@@ -44,7 +73,15 @@ class TurnManager
         moving = true;
     }
 
-    public void finishedMoveCallbackAI()
+    public void playerCallback()
+    {
+        displayCurrentUnit(workingUnit);
+        selectionState = State.UnitMoved;
+        unitSelected = true;
+        moving = false;
+    }
+
+    public void attackSquare()
     {
         List<AttackResult> ars = currentAction.Attack(UnitAction.DontCallBack);
         bool weDied = false;
@@ -55,9 +92,9 @@ class TurnManager
             if (ar.wasKilled())
             {
                 Unit died = ar.target();
-                if (died.Equals(currentAIUnit))
+                if (died.Equals(workingUnit))
                 {
-                    UIManager.getUIManager().clearDisplay();
+                    wipeDisplay();
                     weDied = true;
                 }
                 if (died.isEnemy())
@@ -70,7 +107,31 @@ class TurnManager
                 }
                 died.Die();
             }
+            else
+            {
+                Unit didntDie = ar.target();
+                if (didntDie.isEnemy() != workingUnit.isEnemy())
+                {
+                    pathFinder.highlightAttackedUnit(didntDie);
+                }
+            }
         }
+        if (!weDied)
+        {
+            displayCurrentUnit(workingUnit);
+        }
+
+        if (ars.Count > 0)
+            delayTime = 37;
+        else
+            delayTime = 3;
+
+        moving = false;
+    }
+
+    public void attackSquareAIcallback()
+    {
+        attackSquare();
         // turn ended
         if (toActAI.Count == 0)
         {
@@ -80,23 +141,26 @@ class TurnManager
             else
                 nextTurn(playerUnits);
         }
-        if (!weDied)
-        {
-            UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
-            pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
-        }
+    }
 
-        if (ars.Count > 0)
-            delayTime = 37;
-        else
-            delayTime = 3;
-        moving = false;
+    private void wipeDisplay()
+    {
+        UIManager.getUIManager().clearDisplay();
+        pathFinder.clearHighlightedNodes();
+        pathFinder.clearRangeDisplay();
+    }
+
+    private void displayCurrentUnit(Unit u)
+    { 
+        UIManager.getUIManager().setDisplayedUnit(u);
+        pathFinder.displayRangeOfUnit(u, u.getNode().getPos());
+        pathFinder.highlightSelectedUnit(u);
     }
 
     // TODO: make attack not instant
     int delayTime = 0;
     UnitAction currentAction;
-    Unit currentAIUnit;
+    Unit workingUnit;
     Queue<Unit> toActAI;
     
 
@@ -128,20 +192,21 @@ class TurnManager
 
             if (aiTurn)
             {
-                currentAIUnit = toActAI.Dequeue();
-                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
-                pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
+                workingUnit = toActAI.Dequeue();
+                wipeDisplay();
+                displayCurrentUnit(workingUnit);
 
-                currentAction = ai.RunAI(currentAIUnit, playerUnits);
-                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+                currentAction = ai.RunAI(workingUnit, playerUnits);
+                UIManager.getUIManager().setDisplayedUnit(workingUnit);
 
                 lockMovement();
-                currentAction.Move(finishedMoveCallbackAI);
+                currentAction.Move(attackSquareAIcallback);
             }
 
+            /*
             if (!aiTurn && toActAI.Count == 0)
             {
-                selectionState = State.EnemyTurn;
+                //selectionState = State.EnemyTurn;
 
                 foreach (Unit unit in playerUnits)
                     toActAI.Enqueue(unit);
@@ -153,24 +218,23 @@ class TurnManager
                     pathFinder.clearRangeDisplay();
                     return;
                 }
-            }
+            }*/
 
-            if (!aiTurn)
+            if (!aiTurn && toActAI.Count > 0)
             {
-                currentAIUnit = toActAI.Dequeue();
-                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
-                pathFinder.displayRangeOfUnit(currentAIUnit, currentAIUnit.getNode().getPos());
+                workingUnit = toActAI.Dequeue();
+                wipeDisplay();
+                displayCurrentUnit(workingUnit);
 
-                currentAction = ai.RunAI(currentAIUnit, aiUnits);
-                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+                currentAction = ai.RunAI(workingUnit, aiUnits);
+                UIManager.getUIManager().setDisplayedUnit(workingUnit);
 
                 lockMovement();
-                currentAction.Move(finishedMoveCallbackAI);
+                currentAction.Move(attackSquareAIcallback);
             }
-            else
+            else if (!aiTurn)
             {
-                selectionState = State.OurTurnNoSelection;
-
+                //select logic
                 if (Input.GetMouseButtonDown((int)MouseButton.left))
                 {
                     Vector2 position = getMousePos();
@@ -181,21 +245,27 @@ class TurnManager
 
                         if (unitSelected)
                         {
-                            currentlySelectedUnit.deselect();
+                            workingUnit.deselect();
                             unitSelected = false;
+                            wipeDisplay();
                             selectionState = State.OurTurnNoSelection;
                         }
 
                         if (clickedNode.Occupied)
                         {
-                            currentlySelectedUnit = clickedNode.Occupier;
-                            currentlySelectedUnit.select();
+                            workingUnit = clickedNode.Occupier;
+                            workingUnit.select();
                             unitSelected = true;
-                            pathFinder.displayRangeOfUnit(currentlySelectedUnit, position);
-                            if (currentlySelectedUnit.isEnemy())
+                            pathFinder.displayRangeOfUnit(workingUnit, position);
+                            if (workingUnit.isEnemy())
                                 selectionState = State.UnitActed;
                             else
-                                selectionState = State.UnitFresh;
+                            {
+                                if (workingUnit.hasActed())
+                                    selectionState = State.OurTurnNoSelection;
+                                else
+                                    selectionState = State.UnitFresh;
+                            }
                         }
                         else
                         {
@@ -204,10 +274,45 @@ class TurnManager
                         }
                     }
                 }
+                // attack/move logic
                 if (Input.GetMouseButtonDown((int)MouseButton.right))
                 {
-                    pathFinder.clearRangeDisplay();
-                    selectionState = State.OurTurnNoSelection;
+                    Vector2 mousePos = getMousePos();
+
+                    if (positionInGraph(mousePos) && unitSelected && !workingUnit.isEnemy() && !workingUnit.hasActed())
+                    {
+                        wipeDisplay();
+                        Node clickedNode = pathFinder.closestMostValidNode(mousePos);
+
+                        // attacking
+                        if (workingUnit.hasMoved())
+                        {
+                            int range = Node.range(workingUnit.getNode(), clickedNode);
+                            // can attack
+                            if (clickedNode.Occupied && clickedNode.Occupier.isEnemy() == true
+                             && range >= workingUnit.getMinAttackRange()
+                             && range <= workingUnit.getMaxAttackRange())
+                            {
+                                currentAction = new UnitAction(workingUnit, clickedNode.Occupier, workingUnit.getNode());
+                                currentAction.Move(attackSquare);
+                                selectionState = State.UnitActed;
+                            }
+                        }
+                        // moving
+                        else
+                        {
+                            selectionState = State.EnemyTurn;
+
+                            Queue<Node> path = new Queue<Node>();
+                            double cost = pathFinder.AStar(path, workingUnit.getNode(), clickedNode);
+                            if (cost <= workingUnit.getCurrentWater())
+                            {
+                                moving = true;
+                                workingUnit.moveUnit(playerCallback, clickedNode);
+                            }
+                        }
+                        
+                    }
                 }
             }
 

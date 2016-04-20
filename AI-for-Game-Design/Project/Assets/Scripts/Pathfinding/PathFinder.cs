@@ -976,14 +976,61 @@ namespace Graph
             overlayNodes.Clear();
         }
 
+        Node selectedNode;
+        Node attackedNode;
+
+        public void highlightSelectedUnit(Unit u)
+        {
+            if (selectedNode != null)
+            {
+                selectedNode.destroyThisNode();
+                selectedNode = null;
+            }
+            Node n = u.getNode();
+            selectedNode = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+            selectedNode.setColor(new Color(0, 1f, 0, 1f));
+        }
+
+        public void highlightAttackedUnit(Unit u)
+        {
+            if (attackedNode != null)
+            {
+                attackedNode.destroyThisNode();
+                attackedNode = null;
+            }
+            Node n = u.getNode();
+            attackedNode = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+            attackedNode.setColor(new Color(1f, 0, 0, 1));
+        }
+
+        public void clearHighlightedNodes()
+        {
+            if (selectedNode != null)
+            {
+                selectedNode.destroyThisNode();
+                selectedNode = null;
+            }
+
+            if(attackedNode != null)
+            {
+                attackedNode.destroyThisNode();
+                attackedNode = null;
+            }
+        }
+
 		public void displayRangeOfUnit(Unit u, Vector2 mousePosition)
         {
             clearRangeDisplay();
 
             if (overlayNodes == null)
 				overlayNodes = new List<Node>();
-            
-			List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getCurrentWater());
+
+            List<Node> reach;
+            if (!u.hasMoved())
+                reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getCurrentWater());
+            else
+                reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), 0);
+
             List<Node> range = NodesInRangeOfNodes(reach, u.getMinAttackRange(), u.getMaxAttackRange());
             
             HashSet<Node> inReach = new HashSet<Node>();
