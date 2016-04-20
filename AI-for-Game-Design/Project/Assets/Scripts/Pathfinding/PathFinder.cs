@@ -254,13 +254,13 @@ namespace Graph
         }
 
         ///Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-        private void initializePathfinding()
+        private void initializePathfinding(bool isPathfinding)
         {
             foreach (Node[] arr in nodeArr)
                 foreach (Node p in arr)
                     if (p != null)
                     {
-                        p.initPathfinding();
+                        p.initPathfinding(isPathfinding);
                     }
         }
 
@@ -271,12 +271,12 @@ namespace Graph
         /// <param name="satifies">The predicate each node must follow.</param>
         /// <param name="endurance">The maximum endurance to follow out.</param>
         /// <returns>A sorted list of nodes within a given endurance value.</returns>
-        public List<Node> nodesThatSatisfyPred(Node startNode, System.Predicate<Node> satifies, float endurance = 16.0f, bool stopOnFirst = false)
+        public List<Node> nodesThatSatisfyPred(Node startNode, System.Predicate<Node> satifies, float endurance = 16.0f, bool stopOnFirst = false, bool isPathfinding = true)
         {
             List<Node> foundNodes = new List<Node>();
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            initializePathfinding();
+            initializePathfinding(isPathfinding);
 
             startNode.realCost = 0;
             nodeList.Enqueue(startNode, startNode.realCost);
@@ -437,7 +437,7 @@ namespace Graph
             if (!startNode.Occupied && startNode.isWalkable())
                 return startNode;
 
-            initializePathfinding();
+            initializePathfinding(true);
             
             Queue<Node> listOfNodes = new Queue<Node>();
             listOfNodes.Enqueue(startNode);
@@ -651,11 +651,14 @@ namespace Graph
         /// <param name="pathStoreLoc">The Queue to store the path in.</param>
         /// <param name="start">The starting node.</param>
         /// <param name="end">The ending node.</param>
-        public double AStar(Queue<Node> pathStoreLoc, Node start, Node end)
+        public double AStar(Queue<Node> pathStoreLoc, Node start, Node end, Node toIgnore = null)
         {
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            initializePathfinding();
+            initializePathfinding(false);
+            if (toIgnore != null)
+                toIgnore.Visited = false;
+
             System.Func<Node, Node, float> Heuristic;
             if (allowedPaths == Paths.quadDir)
                 Heuristic = ManhattenHeuristic;
@@ -826,12 +829,12 @@ namespace Graph
             {
                 Node capture = n;
 
-                System.Func<Node, bool> targetFunc = (Node x) =>
+                System.Action<Node> targetFunc = (Node x) =>
                 {
                     if (!x.isWalkable() || !x.Occupied || x.Occupier.isEnemy() == friendType)
-                        return false;
-                    targetList.Add(new Node.NodePointer(capture, x, (int)x.realCost));
-                    return false;
+                        return;
+                    targetList.Add(new Node.NodePointer(capture, x, Node.range(capture, x)));
+                    return;
                 };
                 runFuncOnAllNodesInRangeOfNode(targetFunc, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
             }
@@ -852,15 +855,15 @@ namespace Graph
 
             List<Node> listOfNodes = new List<Node>();
 
-            System.Func<Node, bool> rangeFunc = (Node x) =>
+            System.Action<Node> rangeFunc = (Node x) =>
             {
                 if (inRange.Contains(x))
-                    return false;
+                    return;
                 if (!x.isWalkable())
-                    return false;
+                    return;
                 inRange.Add(x);
                 listOfNodes.Add(x);
-                return true;
+                return;
             };
 
             foreach (Node n in listNodes)
@@ -877,7 +880,7 @@ namespace Graph
         /// <param name="minDist">Minimum firing distance.</param>
         /// <param name="maxDist">Maximum firing distance.</param>
         /// <param name="funcToRun">What function we should run on the nodes in range.</param>
-        public void runFuncOnAllNodesInRangeOfNodes(List<Node> listNodes, int minDist, int maxDist, System.Func<Node, bool> funcToRun)
+        public void runFuncOnAllNodesInRangeOfNodes(List<Node> listNodes, int minDist, int maxDist, System.Action<Node> funcToRun)
         {
             foreach (Node n in listNodes)
                 runFuncOnAllNodesInRangeOfNode(funcToRun, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
@@ -891,12 +894,12 @@ namespace Graph
         /// <param name="minDist">Minimum firing distance.</param>
         /// <param name="maxDist">Maximum firing distance.</param>
         /// <param name="funcToRun">What function we should run on the nodes in range.</param>
-        public void runFuncOnAllNodesInRangeOfNode(Node n, int minDist, int maxDist, System.Func<Node, bool> funcToRun)
+        public void runFuncOnAllNodesInRangeOfNode(Node n, int minDist, int maxDist, System.Action<Node> funcToRun)
         {
             runFuncOnAllNodesInRangeOfNode(funcToRun, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
         }
 
-        private void runFuncOnAllNodesInRangeOfNode(System.Func<Node, bool> func, int x, int y, int minDist, int maxDist)
+        private void runFuncOnAllNodesInRangeOfNode(System.Action<Node> func, int x, int y, int minDist, int maxDist)
         {
             if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
                 return;
@@ -910,7 +913,7 @@ namespace Graph
             runFuncNodesDown(func, x, y + 1, minDist - 1, maxDist - 1);
         }
 
-        private void runFuncNodesLeft(System.Func<Node, bool> func, int x, int y, int minDist, int maxDist)
+        private void runFuncNodesLeft(System.Action<Node> func, int x, int y, int minDist, int maxDist)
         {
             if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
                 return;
@@ -921,7 +924,7 @@ namespace Graph
             runFuncNodesLeft(func, x - 1, y, minDist - 1, maxDist - 1);
         }
         
-        private void runFuncNodesRight(System.Func<Node, bool> func, int x, int y, int minDist, int maxDist)
+        private void runFuncNodesRight(System.Action<Node> func, int x, int y, int minDist, int maxDist)
         {
             if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
                 return;
@@ -932,7 +935,7 @@ namespace Graph
             runFuncNodesRight(func, x + 1, y, minDist - 1, maxDist - 1);
         }
 
-        private void runFuncNodesUp(System.Func<Node, bool> func, int x, int y, int minDist, int maxDist)
+        private void runFuncNodesUp(System.Action<Node> func, int x, int y, int minDist, int maxDist)
         {
             if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
                 return;
@@ -945,7 +948,7 @@ namespace Graph
             runFuncNodesUp(func, x, y - 1, minDist - 1, maxDist - 1);
         }
 
-        private void runFuncNodesDown(System.Func<Node, bool> func, int x, int y, int minDist, int maxDist)
+        private void runFuncNodesDown(System.Action<Node> func, int x, int y, int minDist, int maxDist)
         {
             if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
                 return;

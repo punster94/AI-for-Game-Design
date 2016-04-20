@@ -8,13 +8,25 @@ public class AttackResult {
 	private HitType type;
 	private int damageTaken;
 	private bool killed;
+    private Attack atk;
 
 	// Creates a new Damage object representing the results of an attack
-	public AttackResult(HitType t, int d, bool k) {
+	public AttackResult(HitType t, int d, bool k, Attack atkRef = null) {
 		type = t;
 		damageTaken = d;
 		killed = k;
+        atk = atkRef;
+        if (atkRef != null)
+        {
+            Debug.Log("attacking " + atkRef.getDefender().ident() + " " + atkRef.getDefender().isEnemy() + " did " + damageTaken + " , cur clay=" + atkRef.getDefender().getClay() + " , waskilled = " + killed);
+            Debug.Log("other side " + atkRef.getAttacker().ident() + " " + atkRef.getDefender().isEnemy() + " did " + damageTaken + " , cur clay=" + atkRef.getAttacker().getClay());
+        }
 	}
+    
+    public Unit target()
+    {
+        return atk.getDefender();
+    }
 
 	// Getters
 	public HitType getType() {
