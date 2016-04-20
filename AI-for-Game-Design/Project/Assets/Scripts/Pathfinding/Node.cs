@@ -17,6 +17,48 @@ namespace Graph
         IntVec2 gridPos;
         SpriteRenderer spriteDraw;
 
+        // Allows storing a pointer to another node.
+        public class NodePointer
+        {
+            Node start, finish;
+            int distance;
+            public NodePointer(Node from, Node target, int dist)
+            {
+                start = from;
+                finish = target;
+                distance = dist;
+            }
+
+            public Node getTarget()
+            {
+                return finish;
+            }
+
+            public Node getStart()
+            {
+                return start;
+            }
+
+            public int getDist()
+            {
+                return distance;
+            }
+
+            public override bool Equals(object obj)
+            {
+                Node.NodePointer n = obj as NodePointer;
+                if (n == null)
+                    return false;
+                return n.start == start && n.finish == finish;
+            }
+
+            public override int GetHashCode()
+            {
+                return 57 + start.GetHashCode() * 43 + finish.GetHashCode();
+            }
+        }
+
+
 #if DEBUG_NODE_EDGES
         LineRenderer lineDraw;
 #endif
@@ -38,15 +80,31 @@ namespace Graph
         /// <summary>
         /// Initializes the node for pathfinding.
         /// </summary>
-        public void initPathfinding()
+        public void initPathfinding(bool isPathfinding)
         {
-            Visited = Occupied;
+            if (isPathfinding)
+                Visited = Occupied;
+            else
+                Visited = false;
+
             CameFrom = null;
             realCost = double.PositiveInfinity;
             heuristicCost = double.PositiveInfinity;
         }
 
-        public bool Occupied { get { return occupier == null; } }
+        // Sadly, we need to be able to reserve nodes, so we need a setter.
+        private bool occupied = false;
+        public bool Occupied
+        {
+            get
+            {
+                return occupied;
+            }
+            set
+            {
+                occupied = value;
+            }
+        }
 
         private Unit occupier;
         public Unit Occupier
@@ -59,6 +117,7 @@ namespace Graph
             set
             {
                 occupier = value;
+                Occupied = value != null;
             }
         }
 
@@ -159,7 +218,6 @@ namespace Graph
             //spriteDraw.color = Random.ColorHSV(0.2f, 1.0f, 0.1f, 0.7f, 0.2f, 1.0f);
 
             CameFrom = null;
-            Occupied = false;
             number = num;
 
 #if DEBUG_NODE_EDGES
@@ -360,6 +418,19 @@ namespace Graph
 #if DEBUG_NODE_TEXT
             Object.Destroy(visNodeNum.gameObject);
 #endif
+        }
+        
+        public static int range(Node a, Node b)
+        {
+            int rX = a.getGridPos().x - b.getGridPos().x;
+            int rY = a.getGridPos().y - b.getGridPos().y;
+
+            if (rX < 0)
+                rX = -rX;
+            if (rY < 0)
+                rY = -rY;
+
+            return rX + rY;
         }
     }
 }

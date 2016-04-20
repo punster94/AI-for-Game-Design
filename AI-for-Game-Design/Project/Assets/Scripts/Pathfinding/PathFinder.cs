@@ -3,7 +3,6 @@
 //#define DEBUG_PATHFINDER_LOGDEBUG   // sends pathfinding debug to debug. SIGNIFICANT PERFORMANCE IMPACT!
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 using System.Text;
 
 namespace Graph
@@ -24,10 +23,135 @@ namespace Graph
         public enum Paths { quadDir, octDir }
         public static Paths allowedPaths = Paths.quadDir;
 
+        /// TODO: Implement this in PCG, or use suggestion in MainGame
+        /// <summary>
+        /// Generates a pair of list of spawn points. Assumes graph already generated.
+        /// Picks either top right, bottom left, or top left, bottom right pairs.
+        /// Either key/value can be enemy/friend spawn points.
+        /// Spawns with no gap, but could randomly select from returned positions.
+        /// </summary>
+        /// <param name="spawnPointsPerPlayer">Number of spawn points to provide each player</param>
+        /// <returns>A pair of spawn points (lists of valid node points), empty if failed.</returns>
+        public KeyValuePair<List<Node>, List<Node>> getSpawnPoints(int spawnPointsPerPlayer = 5)
+        {
+            Vector2 locusEnemy, locusFriend;
+
+            // pick top right, bottom left pair
+            if (Random.value < 0.5)
+            {
+                locusEnemy = upperRightBound;
+                locusFriend = lowerLeftBound;
+            }
+            // pick bottom right, top left pair
+            else
+            {
+                locusEnemy = new Vector2(upperRightBound.x, lowerLeftBound.y);
+                locusFriend = new Vector2(lowerLeftBound.x, upperRightBound.y);
+            }
+                        
+            return getSpawnPoints(locusEnemy, locusFriend, spawnPointsPerPlayer);
+        }
+
+
+        /// TODO: Implement this in PCG, or use suggestion in MainGame
+        /// <summary>
+        /// Generates a pair of list of spawn points. Assumes graph already generated.
+        /// Given a pair of locus points, tries to generate a spawn point near it.
+        /// Either key/value can be enemy/friend spawn points.
+        /// Spawns with no gap, but could randomly select from returned positions.
+        /// </summary>
+        /// <param name="spawnPointsPerPlayer">Number of spawn points to provide each player</param>
+        /// <returns>A pair of spawn points (lists of valid node points), empty if failed.</returns>
+        public KeyValuePair<List<Node>, List<Node>> getSpawnPoints(Vector2 spawnPoint1, Vector2 spawnPoint2, int spawnPointsPerPlayer = 5)
+        {
+            List<Node> enemy = new List<Node>(), friend = new List<Node>();
+
+            //The midpoint vector of sorts. 
+            Vector2 shiftVec = (spawnPoint2 - spawnPoint1) / 8;
+
+            Node spawnEn = null, spawnFr = null;
+            int maxTries = 10;
+
+            // Tries to create a path
+            for (int i = 0; i < maxTries; i++)
+            {
+                spawnEn = BFSUnoccupiedAndValid(spawnPoint1);
+                spawnFr = BFSUnoccupiedAndValid(spawnPoint2);
+
+                // Checks for AStar connection between spawns.
+                Queue<Node> pathToSpawns = new Queue<Node>();
+                AStar(pathToSpawns, spawnFr, spawnEn);
+
+                // Failed: no connection.
+                if (pathToSpawns.Count == 0)
+                {
+                    spawnEn = spawnFr = null;
+
+                    // Takes a sorta random walk towards the midpoint.
+                    // This duplicates the action taken on either side.
+                    float randWalkToMidX = Random.value;
+                    float randWalkToMidY = Random.value;
+                    Vector2 shiftToCenter = new Vector2(shiftVec.x * randWalkToMidX, shiftVec.y * randWalkToMidY);
+
+                    spawnPoint1 += shiftToCenter;
+                    spawnPoint2 -= shiftToCenter;
+                }
+                else
+                    break;
+            }
+
+            if (spawnEn == null)
+            {
+                throw new KeyNotFoundException("Didn't find a spawn location!");
+            }
+
+            // Reserves occupation, so we can loop through graph.
+            spawnEn.Occupied = spawnFr.Occupied = true;
+            enemy.Add(spawnEn);
+            friend.Add(spawnFr);
+            spawnPointsPerPlayer--;
+
+            while (spawnPointsPerPlayer > 0)
+            {
+                Node foundEn, foundFr;
+
+                foundEn = BFSUnoccupiedAndValid(spawnEn);
+                foundFr = BFSUnoccupiedAndValid(spawnFr);
+
+                // Error conditions for BFS
+                // Could just break instead, and return less spawn points... bad idea.
+                if (foundEn == spawnEn || foundFr == spawnFr)
+                {
+                    throw new KeyNotFoundException("Didn't find a spawn location!");
+                }
+
+                foundEn.Occupied = foundFr.Occupied = true;
+
+                enemy.Add(foundEn);
+                friend.Add(foundFr);
+
+                spawnPointsPerPlayer--;
+            }
+
+            // Resets occupied status to allow future use.
+            foreach (Node n in enemy)
+                n.Occupied = false;
+            foreach (Node n in friend)
+                n.Occupied = false;
+
+            return new KeyValuePair<List<Node>, List<Node>>(enemy, friend);
+        }
+
         // Node array is stored as Node[inverse-y][x].
         private Node[][] nodeArr;
         private float radii;
-        private Sprite nodeImg = Resources.Load<Sprite>("PathLoc");
+        private Sprite nodeImg;
+
+        //Reserves image before called upon.
+        public void Awake()
+        {
+            nodeImg = Resources.Load<Sprite>("PathLoc");
+        }
 
         private static int LAYER_FILTER_MASK = LayerMask.GetMask("Walls");
 
@@ -129,6 +253,17 @@ namespace Graph
             isInitialized = true;
         }
 
+        ///Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
+        private void initializePathfinding(bool isPathfinding)
+        {
+            foreach (Node[] arr in nodeArr)
+                foreach (Node p in arr)
+                    if (p != null)
+                    {
+                        p.initPathfinding(isPathfinding);
+                    }
+        }
+
         /// <summary>
         /// Returns a sorted list of nodes within a given endurance value.
         /// Performs a Dijkstra-like algorithm.
@@ -136,18 +271,12 @@ namespace Graph
         /// <param name="satifies">The predicate each node must follow.</param>
         /// <param name="endurance">The maximum endurance to follow out.</param>
         /// <returns>A sorted list of nodes within a given endurance value.</returns>
-        public List<Node> nodesThatSatisfyPred(Node startNode, Predicate<Node> satifies, float endurance = 16.0f)
+        public List<Node> nodesThatSatisfyPred(Node startNode, System.Predicate<Node> satifies, float endurance = 16.0f, bool stopOnFirst = false, bool isPathfinding = true)
         {
             List<Node> foundNodes = new List<Node>();
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-            foreach (Node[] arr in nodeArr)
-                foreach (Node p in arr)
-                    if (p != null)
-                    {
-                        p.initPathfinding();
-                    }
+            initializePathfinding(isPathfinding);
 
             startNode.realCost = 0;
             nodeList.Enqueue(startNode, startNode.realCost);
@@ -174,7 +303,11 @@ namespace Graph
                 best.Visited = true;
 
                 if (satifies(best))
+                {
                     foundNodes.Add(best);
+                    if (stopOnFirst)
+                        return foundNodes;
+                }
 
                 //string updateString = "updating: ";
                 foreach (Edge e in best.getEdges())
@@ -240,13 +373,6 @@ namespace Graph
             return nodesThatSatisfyPred(startNode, (_) => true, endurance);
         }
 
-        // TODO: Change to in unit class prev.Occupier = null, next.Ocuppier = this
-        //public void MoveUnit(int prevX, int prevY, Unit u)
-        // {
-        //  nodeArr[prevY][prevX].Occupier = null;
-        //  nodeArr[u.getX()][u.getY()].Occupier = u;
-        // }
-
         /// <summary>
         /// Destroys the current graph, creates a new one with the same area.
         /// Graph must already be created to use this.
@@ -256,8 +382,6 @@ namespace Graph
         {
             if (!isInitialized)
                 throw new UnassignedReferenceException("Pathfinder not initialized yet!");
-
-            Debug.Log("Recreated Graph.");
 
             bool graphWasDisplayed = graphIsDisplayed();
 
@@ -283,6 +407,63 @@ namespace Graph
             if (graphWasDisplayed)
                 graphDisplay(true);
         }
+
+        /// <summary>
+        /// Unlike closestMostValidNode; BFS does up to a full BFS
+        /// to find the closest unocupied & walkable node to a given location.
+        /// Only use when not wanting to take into account edge costs.
+        /// If no nodes found that are valid, returns the start node.
+        /// </summary>
+        /// <param name="startLoc">The location to start looking from.</param>
+        /// <returns>The first unocupied/valid walkable tile found. If no nodes found that are valid, returns the start node.</returns>
+        private Node BFSUnoccupiedAndValid(Vector2 startLoc)
+        {
+            Node startNode = closestMostValidNode(startLoc);
+            return BFSUnoccupiedAndValid(startNode);
+        }
+
+
+        /// <summary>
+        /// Unlike closestMostValidNode; BFS does up to a full BFS
+        /// to find the closest unocupied & walkable node to a given location.
+        /// Only use when not wanting to take into account edge costs.
+        /// If no nodes found that are valid, returns the start node.
+        /// Uses Nodes directly instead of converting from Vector2.
+        /// </summary>
+        /// <param name="startLoc">The location to start looking from.</param>
+        /// <returns>The first unocupied/valid walkable tile found. If no nodes found that are valid, returns the start node.</returns>
+        private Node BFSUnoccupiedAndValid(Node startNode)
+        {
+            if (!startNode.Occupied && startNode.isWalkable())
+                return startNode;
+
+            initializePathfinding(true);
+            
+            Queue<Node> listOfNodes = new Queue<Node>();
+            listOfNodes.Enqueue(startNode);
+
+            // Can't use visited, as we're already using that hack in initializePathfinding...
+            startNode.realCost = -1;
+
+            while (listOfNodes.Count > 0)
+            {
+                Node found = listOfNodes.Dequeue();
+                if (!found.Occupied && found.isWalkable())
+                    return found;
+
+                foreach (Edge e in found.getEdges())
+                {
+                    Node candidate = e.getNode();
+                    if (candidate.realCost > 0)
+                        listOfNodes.Enqueue(candidate);
+
+                    // Can't use visited, as we're already using that hack in initializePathfinding...
+                    candidate.realCost = -1;
+                }
+            }
+
+            return startNode;
+        }
         
         /// <summary>
         /// Finds the closest most-valid node to a given position.
@@ -290,7 +471,7 @@ namespace Graph
         /// </summary>
         /// <param name="loc">The location to start looking from.</param>
         /// <returns>The most valid node that's closest to the given location.</returns>
-        private Node closestMostValidNode(Vector2 loc)
+        public Node closestMostValidNode(Vector2 loc)
         {
             IntVec2 pair = WorldSpaceToArrPos(loc);
 
@@ -395,8 +576,11 @@ namespace Graph
 
         private Node unobstructed(int x, int y, Vector2 pos)
         {
-            if (x < 0 || y < 0 || x >= numXNodes || y >= numYNodes || nodeArr[y][x] == null ||
-               Physics2D.Linecast(nodeArr[y][x].getPos(), pos, LAYER_FILTER_MASK))
+            bool failed = x < 0 || y < 0 || x >= numXNodes || y >= numYNodes || nodeArr[y][x] == null;
+#if DEBUG_PATHFINDER_UPDATELOOP
+            failed |= Physics2D.Linecast(nodeArr[y][x].getPos(), pos, LAYER_FILTER_MASK))
+#endif
+            if (failed)
                 return null;
             return nodeArr[y][x];
         }
@@ -407,14 +591,14 @@ namespace Graph
         /// <param name="pathStoreLoc">The path will be stored in this queue.</param>
         /// <param name="startPos">The starting position.</param>
         /// <param name="targetPos">The target position.</param>
-        public void AStar(Queue<Node> pathStoreLoc, Vector2 startPos, Vector2 targetPos)
+        public double AStar(Queue<Node> pathStoreLoc, Vector2 startPos, Vector2 targetPos)
         {
             if (!isInitialized)
                 throw new UnassignedReferenceException("Pathfinder not initialized yet!");
             Node start = closestMostValidNode(startPos);
             Node end = closestMostValidNode(targetPos);
 
-            AStar(pathStoreLoc, start, end);
+            return AStar(pathStoreLoc, start, end);
         }
 
         /// <summary>
@@ -423,13 +607,13 @@ namespace Graph
         /// <param name="pathStoreLoc">The path will be stored in this queue.</param>
         /// <param name="startNode">The starting node.</param>
         /// <param name="targetPos">The target position.</param>
-        public void AStar(Queue<Node> pathStoreLoc, Node startNode, Vector2 targetPos)
+        public double AStar(Queue<Node> pathStoreLoc, Node startNode, Vector2 targetPos)
         {
             if (!isInitialized)
                 throw new UnassignedReferenceException("Pathfinder not initialized yet!");
             Node end = closestMostValidNode(targetPos);
 
-            AStar(pathStoreLoc, startNode, end);
+            return AStar(pathStoreLoc, startNode, end);
         }
 
         /// <summary>
@@ -455,8 +639,8 @@ namespace Graph
         /// <returns></returns>
         public float ManhattenHeuristic(Node startNode, Node endNode)
         {
-            float distX = Mathf.Abs(startNode.getGridPos().x - endNode.getGridPos().x);
-            float distY = Mathf.Abs(startNode.getGridPos().y - endNode.getGridPos().y);
+            int distX = Mathf.Abs(startNode.getGridPos().x - endNode.getGridPos().x);
+            int distY = Mathf.Abs(startNode.getGridPos().y - endNode.getGridPos().y);
 
             return distX + distY;
         }
@@ -467,18 +651,15 @@ namespace Graph
         /// <param name="pathStoreLoc">The Queue to store the path in.</param>
         /// <param name="start">The starting node.</param>
         /// <param name="end">The ending node.</param>
-        public void AStar(Queue<Node> pathStoreLoc, Node start, Node end)
+        public double AStar(Queue<Node> pathStoreLoc, Node start, Node end, Node toIgnore = null)
         {
             MinPriorityQueue<Node> nodeList = new MinPriorityQueue<Node>();
 
-            //Initializes nodes to ifinity realcost, heuristic, null camefrom, and not visited.
-            foreach (Node[] arr in nodeArr)
-                foreach (Node p in arr)
-                    if (p != null)
-                    {
-                        p.initPathfinding();
-                    }
-            Func<Node, Node, float> Heuristic;
+            initializePathfinding(true);
+            if (toIgnore != null)
+                toIgnore.Visited = false;
+
+            System.Func<Node, Node, float> Heuristic;
             if (allowedPaths == Paths.quadDir)
                 Heuristic = ManhattenHeuristic;
             else if (allowedPaths == Paths.octDir)
@@ -523,7 +704,7 @@ namespace Graph
                     Debug.Log(encountered);
                     Debug.Log(nodes);
 #endif
-                    return;
+                    return best.realCost;
                 }
                 best.Visited = true;
 
@@ -571,6 +752,13 @@ namespace Graph
                     }
                 }
             }
+
+#if DEBUG_PATHFINDER_LOGDEBUG
+            encountered.Append("Failed!\n");
+            Debug.Log(encountered);
+            Debug.Log(nodes);
+#endif
+            return double.PositiveInfinity;
         }
 
         /// <summary>
@@ -624,135 +812,204 @@ namespace Graph
         private List<Node> overlayNodes;
 
         GameObject pathDrawer = null;
+        
+        /// <summary>
+        /// Returns a list of (duplicated) node pointer pairs of places where we can shoot from at an enemy.
+        /// </summary>
+        /// <param name="listNodes">Look at all nodes in range of each of the nodes in this list.</param>
+        /// <param name="minDist">Minimum firing distance.</param>
+        /// <param name="maxDist">Maximum firing distance.</param>
+        /// <param name="friendType">unit.isEnemy() is passed here.</param>
+        /// <returns>Node pointer pairs that map a given point to a point we can fire at.</returns>
+        public List<Node.NodePointer> Targets(List<Node> listNodes, int minDist, int maxDist, bool friendType)
+        {
+            List<Node.NodePointer> targetList = new List<Node.NodePointer>();
+            
+            foreach (Node n in listNodes)
+            {
+                Node capture = n;
 
+                System.Action<Node> targetFunc = (Node x) =>
+                {
+                    if (!x.isWalkable() || !x.Occupied || x.Occupier.isEnemy() == friendType)
+                        return;
+                    targetList.Add(new Node.NodePointer(capture, x, Node.range(capture, x)));
+                    return;
+                };
+                runFuncOnAllNodesInRangeOfNode(targetFunc, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
+            }
+
+            return targetList;
+        }
+
+        /// <summary>
+        /// Returns a list of (non-duplicated) nodes in range of the nodes in listNodes.
+        /// </summary>
+        /// <param name="listNodes">Look at all nodes in range of each of the nodes in this list.</param>
+        /// <param name="minDist">Minimum firing distance.</param>
+        /// <param name="maxDist">Maximum firing distance.</param>
+        /// <returns></returns>
         public List<Node> NodesInRangeOfNodes(List<Node> listNodes, int minDist, int maxDist)
         {
             HashSet<Node> inRange = new HashSet<Node>();
 
-            foreach (Node n in listNodes)
-                nodesInRangeOfNode(inRange, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
-
             List<Node> listOfNodes = new List<Node>();
-            listOfNodes.AddRange(inRange);
+
+            System.Action<Node> rangeFunc = (Node x) =>
+            {
+                if (inRange.Contains(x))
+                    return;
+                if (!x.isWalkable())
+                    return;
+                inRange.Add(x);
+                listOfNodes.Add(x);
+                return;
+            };
+
+            foreach (Node n in listNodes)
+                runFuncOnAllNodesInRangeOfNode(rangeFunc, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
+            
             return listOfNodes;
         }
 
-        private void nodesInRangeOfNode(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
-        {
-            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
-                return;
-
-            if (minDist <= 0 && nodeArr[y][x].isWalkable())
-                inRange.Add(nodeArr[y][x]);
-            
-            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeUp(inRange, x, y - 1, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeDown(inRange, x, y + 1, minDist - 1, maxDist - 1);
-        }
-
-        private void nodesInRangeOfNodeLeft(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
-        {
-            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
-                return;
-
-            if (minDist <= 0 && nodeArr[y][x].isWalkable())
-                inRange.Add(nodeArr[y][x]);
-
-            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
-        }
-
-
-        private void nodesInRangeOfNodeRight(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
-        {
-            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
-                return;
-
-            if (minDist <= 0 && nodeArr[y][x].isWalkable())
-                inRange.Add(nodeArr[y][x]);
-
-            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
-        }
-
-        private void nodesInRangeOfNodeUp(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
-        {
-            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
-                return;
-
-            if (minDist <= 0 && nodeArr[y][x].isWalkable())
-                inRange.Add(nodeArr[y][x]);
-
-            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeUp(inRange, x, y - 1, minDist - 1, maxDist - 1);
-        }
-
-        private void nodesInRangeOfNodeDown(HashSet<Node> inRange, int x, int y, int minDist, int maxDist)
-        {
-            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
-                return;
-
-            if (minDist <= 0 && nodeArr[y][x].isWalkable())
-                inRange.Add(nodeArr[y][x]);
-
-            nodesInRangeOfNodeLeft(inRange, x - 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeRight(inRange, x + 1, y, minDist - 1, maxDist - 1);
-            nodesInRangeOfNodeDown(inRange, x, y + 1, minDist - 1, maxDist - 1);
-        }
         /// <summary>
-        /// The graph has a update function, for showing off pathfinding
-        /// without using the subject as a starting node.
-        /// Can also automatically update the graph to changes if enabled.
+        /// Idea of this function: You give it a function that has captured local variables so you can
+        /// run whatever you want on each nodes that is in range of all nodes in listOfNodes, including duplicates.
         /// </summary>
-        void Update()
+        /// <param name="listNodes">Look at all nodes in range of the nodes in this list.</param>
+        /// <param name="minDist">Minimum firing distance.</param>
+        /// <param name="maxDist">Maximum firing distance.</param>
+        /// <param name="funcToRun">What function we should run on the nodes in range.</param>
+        public void runFuncOnAllNodesInRangeOfNodes(List<Node> listNodes, int minDist, int maxDist, System.Action<Node> funcToRun)
         {
-            if (Input.GetKeyDown("y"))
-            {
-                if (overlayNodes == null)
-                    overlayNodes = new List<Node>();
-
-                foreach (Node n in overlayNodes)
-                    if (n != null)
-                        n.destroyThisNode();
-
-                overlayNodes.Clear();
-
-                List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(getMousePos()), 8);
-                List<Node> range = NodesInRangeOfNodes(reach, 2, 3);
-
-                //HACK: DOESN'T WORK!
-                HashSet<Node> inReach = new HashSet<Node>();
-                inReach.UnionWith(reach);
-                HashSet<Node> inRange = new HashSet<Node>();
-                inRange.UnionWith(range);
-                inRange.RemoveWhere(inReach.Contains);
-
-                foreach (Node n in reach)
-                {
-                    //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-                    q.setColor(new Color(0, 0.5f, 0, 0.75f));
-                    
-                    overlayNodes.Add(q);
-                }
-
-
-                foreach (Node n in inRange)
-                {
-                    //make slightly smaller to show square off
-                    Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-                    q.setColor(new Color(0, 0, 0.5f, 0.75f));
-
-                    overlayNodes.Add(q);
-                }
-            }
+            foreach (Node n in listNodes)
+                runFuncOnAllNodesInRangeOfNode(funcToRun, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
         }
         
-
-        private Vector2 getMousePos()
+        /// <summary>
+        /// Idea of this function: You give it a function that has captured local variables so you can
+        /// run whatever you want on all nodes that are in range of a given node.
+        /// </summary>
+        /// <param name="listNodes">Look at all nodes in range of this node.</param>
+        /// <param name="minDist">Minimum firing distance.</param>
+        /// <param name="maxDist">Maximum firing distance.</param>
+        /// <param name="funcToRun">What function we should run on the nodes in range.</param>
+        public void runFuncOnAllNodesInRangeOfNode(Node n, int minDist, int maxDist, System.Action<Node> funcToRun)
         {
-            return Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            runFuncOnAllNodesInRangeOfNode(funcToRun, n.getGridPos().x, n.getGridPos().y, minDist, maxDist);
         }
+
+        private void runFuncOnAllNodesInRangeOfNode(System.Action<Node> func, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0)
+                func(nodeArr[y][x]);
+
+            runFuncNodesLeft(func, x - 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesRight(func, x + 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesUp(func, x, y - 1, minDist - 1, maxDist - 1);
+            runFuncNodesDown(func, x, y + 1, minDist - 1, maxDist - 1);
+        }
+
+        private void runFuncNodesLeft(System.Action<Node> func, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0)
+                func(nodeArr[y][x]);
+
+            runFuncNodesLeft(func, x - 1, y, minDist - 1, maxDist - 1);
+        }
+        
+        private void runFuncNodesRight(System.Action<Node> func, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0)
+                func(nodeArr[y][x]);
+
+            runFuncNodesRight(func, x + 1, y, minDist - 1, maxDist - 1);
+        }
+
+        private void runFuncNodesUp(System.Action<Node> func, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0)
+                func(nodeArr[y][x]);
+
+            runFuncNodesLeft(func, x - 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesRight(func, x + 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesUp(func, x, y - 1, minDist - 1, maxDist - 1);
+        }
+
+        private void runFuncNodesDown(System.Action<Node> func, int x, int y, int minDist, int maxDist)
+        {
+            if (maxDist < 0 || x < 0 || x >= numXNodes || y < 0 || y >= numYNodes)
+                return;
+
+            if (minDist <= 0)
+                func(nodeArr[y][x]);
+
+            runFuncNodesLeft(func, x - 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesRight(func, x + 1, y, minDist - 1, maxDist - 1);
+            runFuncNodesDown(func, x, y + 1, minDist - 1, maxDist - 1);
+        }
+
+        /// <summary>
+        /// Clears the display of range nodes.
+        /// </summary>
+        public void clearRangeDisplay()
+        {
+            if (overlayNodes == null)
+                return;
+
+            foreach (Node n in overlayNodes)
+                if (n != null)
+                    n.destroyThisNode();
+
+            overlayNodes.Clear();
+        }
+
+		public void displayRangeOfUnit(Unit u, Vector2 mousePosition)
+        {
+            clearRangeDisplay();
+
+            if (overlayNodes == null)
+				overlayNodes = new List<Node>();
+            
+			List<Node> reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getCurrentWater());
+            List<Node> range = NodesInRangeOfNodes(reach, u.getMinAttackRange(), u.getMaxAttackRange());
+            
+            HashSet<Node> inReach = new HashSet<Node>();
+			inReach.UnionWith(reach);
+			HashSet<Node> inRange = new HashSet<Node>();
+			inRange.UnionWith(range);
+			inRange.RemoveWhere(inReach.Contains);
+
+			foreach (Node n in inReach)
+			{
+				//make slightly smaller to show square off
+				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+				q.setColor(new Color(0, 0.5f, 0, 0.75f));
+
+				overlayNodes.Add(q);
+			}
+            
+			foreach (Node n in inRange)
+			{
+				//make slightly smaller to show square off
+				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
+				q.setColor(new Color(0, 0, 0.5f, 0.75f));
+
+				overlayNodes.Add(q);
+			}
+		}
 
         /// <summary>
         /// Displays a path of nodes.
@@ -767,9 +1024,9 @@ namespace Graph
 
             //If we were displaying a path, reset the colors.
             if (manualStartNode != null)
-                manualStartNode.setColor(Node.defColor);
+                manualStartNode.resetColor();
             if (manualEndNode != null)
-                manualEndNode.setColor(Node.defColor);
+                manualEndNode.resetColor();
 
             //Set the colors for the start and end nodes.
             manualStartNode = PathCopy[0];
@@ -907,7 +1164,7 @@ namespace Graph
         /// </summary>
         /// <param name="pos">The position in world space.</param>
         /// <returns>The position in array space.</returns>
-        private IntVec2 WorldSpaceToArrPos(Vector2 pos)
+        public IntVec2 WorldSpaceToArrPos(Vector2 pos)
         {
             float x = pos.x - lowerLeftBound.x;
             float y = pos.y - lowerLeftBound.y;
@@ -922,7 +1179,7 @@ namespace Graph
         /// </summary>
         /// <param name="pos">The position in array space.</param>
         /// <returns>The position in world space.</returns>
-        private Vector2 ArrPosToWorldSpace(IntVec2 pos)
+        public Vector2 ArrPosToWorldSpace(IntVec2 pos)
         {
             float x = pos.x / nodeDensity;
             float y = pos.y / nodeDensity;
@@ -930,6 +1187,16 @@ namespace Graph
             y += lowerLeftBound.y;
 
             return new Vector2(x, y);
+        }
+
+        public Vector2 getTopRightBound()
+        {
+            return upperRightBound;
+        }
+
+        public Vector2 getBottomLeftBound()
+        {
+            return lowerLeftBound;
         }
     }
 }
