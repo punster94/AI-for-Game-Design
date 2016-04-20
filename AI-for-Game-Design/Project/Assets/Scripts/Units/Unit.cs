@@ -15,7 +15,7 @@ public abstract class Unit {
 	PathFinder pathfinder;
 	const float doneDist = 0.07f;
 	const float diffDist = 1.2f;
-	static float maxSpeed = 24f;
+	static float maxSpeed = 18f;
 	float origDist = float.PositiveInfinity;
 	float minDist = float.PositiveInfinity;
 
@@ -51,6 +51,7 @@ public abstract class Unit {
 	// TODO: Make a check to only path to a spot that is in range AND unoccupied
 	// TODO: We also want to make sure the user can undo moves before completely committing to them
 	public void Update() {
+        /*
         // TODO: Remove this logic, replace with only updateSeek();
 		if(currentlySelected && hasNotMovedThisTurn) {
 			if(Input.GetMouseButtonDown((int)MouseButton.right)) {
@@ -65,7 +66,7 @@ public abstract class Unit {
                 currentWater -= (int) cost;
 				//hasNotMovedThisTurn = false;
 			}
-		}
+		}*/
 
 		updateSeek();
 	}
@@ -94,10 +95,11 @@ public abstract class Unit {
         //AStar pathfinding
         targets.Clear();
         Queue<Node> path = new Queue<Node>();
+
         double cost = getPathFinder().AStar(path, getNode(), target);
 
-        if (cost > currentWater)
-            return;
+        //if (cost > currentWater)
+        //    return;
         foreach (Node n in path)
             targets.Enqueue(new Vector2(n.getPos().x, n.getPos().y));
 
@@ -137,17 +139,31 @@ public abstract class Unit {
     /// </summary>
     private void updateSeek() {
 		// Seek method
+        // TODO: fix multiseek units
 		if(targets.Count > 0) {
 			Vector2 currentTarget = targets.Peek();
 
 			//If we're done with this target, or not getting anywhere, dequeue the next target.
 			float newDist = Vector2.Distance(transform.position, currentTarget);
-			if (newDist < doneDist || newDist > minDist * diffDist) {
+			if (newDist < doneDist || newDist > minDist * diffDist)
+            {
 				transform.position = currentTarget;
 				targets.Dequeue();
 				origDist = Vector2.Distance(transform.position, currentTarget) * diffDist;
 				minDist = float.PositiveInfinity;
-			}
+
+                //Finished!
+                if (targets.Count == 0)
+                {
+                    transform.position = currentTarget;
+                    Node newPosition = getPathFinder().closestMostValidNode(transform.position);
+                    node.Occupier = null;
+                    newPosition.Occupier = this;
+                    node = newPosition;
+
+                    callbackFunction();
+                }
+            }
 			//Otherwise continue making our way towards the target.
 			else {
 				transform.Rotate(Vector3.forward,
@@ -155,16 +171,6 @@ public abstract class Unit {
 				transform.position += transform.up.normalized * Time.deltaTime * doneDist * maxSpeed * 5.0f;
 				if (newDist < minDist)
 					minDist = newDist + diffDist;
-			}
-
-            //Finished!
-			if(targets.Count == 0) {
-				Node newPosition = getPathFinder().closestMostValidNode(transform.position);
-				node.Occupier = null;
-				newPosition.Occupier = this;
-				node = newPosition;
-                
-                callbackFunction();
 			}
 		}
 	}

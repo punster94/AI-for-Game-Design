@@ -48,6 +48,9 @@ public class MainGame : MonoBehaviour {
 			addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
         }
 
+        enemyUnits.Reverse();
+        allyUnits.Reverse();
+
         turnManager = new TurnManager(pathFinder, allyUnits, enemyUnits);
 	}
 
