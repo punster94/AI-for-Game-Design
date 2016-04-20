@@ -115,6 +115,11 @@ public abstract class Unit {
         return !hasNotMovedThisTurn;
     }
 
+    public void setMoved()
+    {
+        hasNotMovedThisTurn = false;
+    }
+
     /// <summary>
     /// Tries to undo an action. If successful, returns true, else false.
     /// </summary>
@@ -170,7 +175,7 @@ public abstract class Unit {
 			else {
 				transform.Rotate(Vector3.forward,
 					getAbsoluteAngle(transform.up, currentTarget - (Vector2)(transform.position)));
-				transform.position += transform.up.normalized * Time.deltaTime * doneDist * maxSpeed * 5.0f;
+				transform.position += transform.up.normalized * Time.deltaTime * doneDist * getMaxWater() * maxSpeed / 12 * 5.0f;
 				if (newDist < minDist)
 					minDist = newDist + diffDist;
 			}

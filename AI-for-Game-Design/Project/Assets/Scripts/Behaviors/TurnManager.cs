@@ -41,8 +41,29 @@ class TurnManager
     {
         selectionState = State.EnemyTurn;
         UIManager.getUIManager().ChangeButtonState(selectionState);
-        aiTurn = true;
-        // Add remaining units to queue that have not moved
+        
+        foreach (Unit u in playerUnits)
+        {
+            if (!u.hasMoved())
+            {
+                toActAI.Enqueue(u);
+            }
+        }
+
+        // already moved all units, enemy's turn now.
+        if (toActAI.Count == 0)
+        {
+            nextTurn(aiUnits);
+            aiTurn = true;
+        }
+
+        // we won!
+        if (aiUnits.Count == 0)
+        {
+            aiTurn = false;
+            selectionState = State.OurTurnNoSelection;
+            moving = true;
+        }
     }
 
     void onCancel()
@@ -61,6 +82,7 @@ class TurnManager
         unitSelected = false;
         UIManager.getUIManager().ChangeButtonState(selectionState);
         workingUnit.hasActed(true);
+        workingUnit.setMoved();
     }
     
     bool unitSelected = false;
@@ -75,7 +97,8 @@ class TurnManager
 
     public void playerCallback()
     {
-        displayCurrentUnit(workingUnit);
+        UIManager.getUIManager().setDisplayedUnit(workingUnit);
+        pathFinder.displayRangeOfUnit(workingUnit, workingUnit.getNode().getPos());
         selectionState = State.UnitMoved;
         unitSelected = true;
         moving = false;
@@ -139,7 +162,12 @@ class TurnManager
             if (aiTurn)
                 nextTurn(aiUnits);
             else
+            {
+                selectionState = State.OurTurnNoSelection;
+                UIManager.getUIManager().ChangeButtonState(selectionState);
+                wipeDisplay();
                 nextTurn(playerUnits);
+            }
         }
     }
 
@@ -172,6 +200,18 @@ class TurnManager
 
     public void Update()
     {
+        // player won!
+        if (aiUnits.Count == 0)
+        {
+            UIManager.getUIManager().gameOver(true);
+        }
+
+        // ai won!
+        if (playerUnits.Count == 0)
+        {
+            UIManager.getUIManager().gameOver(false);
+        }
+
         if (delayTime <= 0 && !moving)
         {
             if (aiTurn && toActAI.Count == 0)
@@ -202,23 +242,6 @@ class TurnManager
                 lockMovement();
                 currentAction.Move(attackSquareAIcallback);
             }
-
-            /*
-            if (!aiTurn && toActAI.Count == 0)
-            {
-                //selectionState = State.EnemyTurn;
-
-                foreach (Unit unit in playerUnits)
-                    toActAI.Enqueue(unit);
-
-                if (toActAI.Count == 0)
-                {
-                    moving = true;
-                    UIManager.getUIManager().clearDisplay();
-                    pathFinder.clearRangeDisplay();
-                    return;
-                }
-            }*/
 
             if (!aiTurn && toActAI.Count > 0)
             {
@@ -254,6 +277,7 @@ class TurnManager
                         if (clickedNode.Occupied)
                         {
                             workingUnit = clickedNode.Occupier;
+                            displayCurrentUnit(workingUnit);
                             workingUnit.select();
                             unitSelected = true;
                             pathFinder.displayRangeOfUnit(workingUnit, position);
@@ -269,7 +293,7 @@ class TurnManager
                         }
                         else
                         {
-                            pathFinder.clearRangeDisplay();
+                            wipeDisplay();
                             selectionState = State.OurTurnNoSelection;
                         }
                     }
@@ -308,6 +332,7 @@ class TurnManager
                             if (cost <= workingUnit.getCurrentWater())
                             {
                                 moving = true;
+                                displayCurrentUnit(workingUnit);
                                 workingUnit.moveUnit(playerCallback, clickedNode);
                             }
                         }
@@ -324,6 +349,11 @@ class TurnManager
 
             if (delayTime > 0)
                 delayTime--;
+            if (delayTime == 0)
+            {
+                if (!aiTurn && !moving && toActAI.Count == 0)
+                    selectionState = State.OurTurnNoSelection;
+            }
         }
 
         UIManager.getUIManager().ChangeButtonState(selectionState);

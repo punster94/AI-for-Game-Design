@@ -106,6 +106,25 @@ class UIManager
         UnitHardness.text = "Hardness: " + uRef.getHardness();
         UnitRangeNotation.text = "Range: [" + uRef.getMinAttackRange() + ", " + uRef.getMaxAttackRange() + "]";
     }
+
+    public void gameOver(bool playerWon)
+    {
+        if (playerWon)
+        {
+            UnitName.text = "Player Won!";
+            UnitName.color = Color.black;
+        }
+        else
+        {
+            UnitName.text = "Enemy Won. :(";
+            UnitName.color = Color.red;
+        }
+        UnitClay.text = "Credits:";
+        UnitWater.text = "Louis Hofer";
+        UnitBendiness.text = "Jacob Cassagnol";
+        UnitHardness.text = "Ken Mortimer";
+        UnitRangeNotation.text = "+ Lisa & Ali!";
+    }
     
     public void clearDisplay()
     {
