@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using Graph;
+using System.Collections.Generic;
 
 class TurnManager 
 {
@@ -8,58 +9,154 @@ class TurnManager
     Button NextTurn;
     Button Cancel;
     Button Wait;
-    ButtonState selectionState;
+    State selectionState;
     PathFinder pathFinder;
 
-    public TurnManager(PathFinder p)
+    List<Unit> playerUnits;
+    List<Unit> aiUnits;
+
+    public TurnManager(PathFinder p, List<Unit> ally, List<Unit> enemy)
     {
         pathFinder = p;
         ai = new UnitAI(pathFinder);
+
+        playerUnits = ally;
+        aiUnits = enemy;
 
         NextTurn = UIManager.getUIManager().getNextTurnButton();
         Cancel = UIManager.getUIManager().getCancelButton();
         Wait = UIManager.getUIManager().getWaitButton();
 
-        selectionState = ButtonState.OurTurnNoSelection;
+        selectionState = State.OurTurnNoSelection;
         UIManager.getUIManager().ChangeButtonState(selectionState);
+
+        toActAI = new Queue<Unit>();
     }
     
     Unit currentlySelectedUnit = null;
     bool unitSelected = false;
 
-    bool turn = true;
+    bool aiTurn = true;
+    bool moving = false;
+
+    public void lockMovement()
+    {
+        moving = true;
+    }
+
+    public void finishedAttackCallback()
+    {
+        List<AttackResult> ars = currentAction.Attack(UnitAction.DontCallBack);
+        foreach(AttackResult ar in ars)
+            if (ar.wasKilled())
+            {
+                Unit died = ar.target();
+                if (died.isEnemy())
+                    aiUnits.Remove(died);
+                else
+                    playerUnits.Remove(died);
+                died.Die();
+                aiTurn = false;
+            }
+        moving = false;
+    }
+
+    // TODO: make attack not instant
+    UnitAction currentAction;
+    Queue<Unit> toActAI;
+    
+
+    private void nextTurn(List<Unit> toReset)
+    {
+        foreach (Unit u in toReset)
+            u.resetTurn();
+    }
 
     public void Update()
     {
-        if (Input.GetMouseButtonDown((int)MouseButton.left))
+        if (!moving)
         {
-            Vector2 position = getMousePos();
-
-            if (clickInGraph(position))
+            if (aiTurn && toActAI.Count == 0)
             {
-                Node clickedNode = pathFinder.closestMostValidNode(position);
+                selectionState = State.EnemyTurn;
 
-                if (unitSelected)
+                foreach (Unit unit in aiUnits)
+                    toActAI.Enqueue(unit);
+
+                UIManager.getUIManager().setDisplayedUnit(playerUnits[playerUnits.Count - 1]);
+            }
+
+            if (aiTurn)
+            {
+                Unit currentAIUnit = toActAI.Dequeue();
+                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+                // turn ended
+                if (toActAI.Count == 0)
                 {
-                    currentlySelectedUnit.deselect();
-                    unitSelected = false;
+                    //aiTurn = false;
+                    nextTurn(aiUnits);
                 }
 
-                if (clickedNode.Occupied)
+                currentAction = ai.RunAI(currentAIUnit, playerUnits);
+                UIManager.getUIManager().setDisplayedUnit(currentAIUnit);
+
+                lockMovement();
+                currentAction.Move(finishedAttackCallback);
+            }
+            else
+            {
+                selectionState = State.OurTurnNoSelection;
+
+                if (Input.GetMouseButtonDown((int)MouseButton.left))
                 {
-                    currentlySelectedUnit = clickedNode.Occupier;
-                    currentlySelectedUnit.select();
-                    unitSelected = true;
-                    pathFinder.displayRangeOfUnit(currentlySelectedUnit, position);
+                    Vector2 position = getMousePos();
+
+                    if (positionInGraph(position))
+                    {
+                        Node clickedNode = pathFinder.closestMostValidNode(position);
+
+                        if (unitSelected)
+                        {
+                            currentlySelectedUnit.deselect();
+                            unitSelected = false;
+                            selectionState = State.OurTurnNoSelection;
+                        }
+
+                        if (clickedNode.Occupied)
+                        {
+                            currentlySelectedUnit = clickedNode.Occupier;
+                            currentlySelectedUnit.select();
+                            unitSelected = true;
+                            pathFinder.displayRangeOfUnit(currentlySelectedUnit, position);
+                            if (currentlySelectedUnit.isEnemy())
+                                selectionState = State.UnitActed;
+                            else
+                                selectionState = State.UnitFresh;
+                        }
+                        else
+                        {
+                            pathFinder.clearRangeDisplay();
+                            selectionState = State.OurTurnNoSelection;
+                        }
+                    }
                 }
-                else
+                if (Input.GetMouseButtonDown((int)MouseButton.right))
                 {
                     pathFinder.clearRangeDisplay();
+                    selectionState = State.OurTurnNoSelection;
                 }
             }
+
         }
-        if (Input.GetMouseButtonDown((int)MouseButton.right))
-            pathFinder.clearRangeDisplay();
+        else
+        {
+            // disables all buttons while locked
+            selectionState = State.EnemyTurn;
+
+
+        }
+
+        UIManager.getUIManager().ChangeButtonState(selectionState);
     }
 
     private Vector2 getMousePos()
@@ -67,7 +164,7 @@ class TurnManager
         return Camera.main.ScreenToWorldPoint(Input.mousePosition);
     }
 
-    private bool clickInGraph(Vector2 realPos)
+    private bool positionInGraph(Vector2 realPos)
     {
         Vector2 botLeft = pathFinder.getBottomLeftBound();
         Vector2 upRight = pathFinder.getTopRightBound();

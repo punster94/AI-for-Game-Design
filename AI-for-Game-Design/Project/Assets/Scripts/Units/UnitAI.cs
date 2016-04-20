@@ -74,6 +74,7 @@ class UnitAI
     {
         List<Node.NodePointer> targets = pathManager.getCurrentTargets(subjectRef);
         MinPriorityQueue<UnitAction> bestMoves = new MinPriorityQueue<UnitAction>();
+        int realclay = subjectRef.getClay();
 
         // The "max-y" part: maximize (damage/counter-damage)
         foreach (Node.NodePointer candidateAttackTarget in targets)
@@ -84,6 +85,7 @@ class UnitAI
 
             AttackRound util = new AttackRound(subjectRef, moveCost, curEnemy);
 
+
             UnitAction roundMove = new UnitAction(subjectRef, curEnemy, candidateAttackTarget.getStart());
 
             int totDmg = 0;
@@ -93,6 +95,7 @@ class UnitAI
             {
                 bestMoves.Enqueue(roundMove, double.PositiveInfinity);
                 util.resetBack();
+                subjectRef.setClay(realclay);
                 continue;
             }
 
@@ -131,7 +134,10 @@ class UnitAI
                 bestMoves.Enqueue(roundMove, -((double)totDmg / subjectRef.getClay()));
             
             util.resetBack();
+            subjectRef.setClay(realclay);
         }
+
+        subjectRef.setClay(realclay);
 
         // no local targets...
         if (bestMoves.Count == 0)
@@ -145,12 +151,22 @@ class UnitAI
 
     private KeyValuePair<Result, UnitAction> FindUnit()
     {
-        Node closestEnemyNode = pathManager.getClosestNode(subjectRef, (Node q) => { return q.Occupied && q.Occupier.isEnemy() != subjectRef.isEnemy(); });
+        Predicate<Node> findEn = (Node q) =>
+        {
+            bool isOccupied = q.Occupied;
+            if (!isOccupied)
+                return false;
+            if (q.Occupier.isEnemy() != subjectRef.isEnemy())
+                return true;
+            return false;
+        };
+
+        Node closestEnemyNode = pathManager.getClosestNode(subjectRef, findEn);
         if (closestEnemyNode == null)
             return new KeyValuePair<Result, UnitAction>(Result.NothingFound, null);
 
         Queue<Node> path = new Queue<Node>();
-        pathFinderRef.AStar(path, subjectRef.getNode(), closestEnemyNode);
+        pathFinderRef.AStar(path, subjectRef.getNode(), closestEnemyNode, closestEnemyNode);
 
         Node goTo = null;
 

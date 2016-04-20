@@ -18,7 +18,7 @@ public class MainGame : MonoBehaviour {
     TurnManager turnManager;
 
 	// Use this for initialization
-	void Start() {
+	void Awake() {
 		enemyUnits = new List<Unit>();
 		allyUnits = new List<Unit>();
 
@@ -34,7 +34,11 @@ public class MainGame : MonoBehaviour {
 
         //TODO: Integrate PCG here
         //OR generate more spawns than needed and randomly select from generated spawn points.
-        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(5);
+        Vector2 topright = pathFinder.getTopRightBound();
+        Vector2 botleft = pathFinder.getBottomLeftBound();
+        Vector2 mid = topright - botleft;
+        mid /= 4;
+        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 5);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
             Node spawnEnemy = spawnPoints.Key[i];
@@ -44,7 +48,9 @@ public class MainGame : MonoBehaviour {
 			addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
         }
 
-        turnManager = new TurnManager(pathFinder);
+        enemyUnits.Reverse();
+
+        turnManager = new TurnManager(pathFinder, allyUnits, enemyUnits);
 	}
 
 	void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy) {
@@ -53,9 +59,10 @@ public class MainGame : MonoBehaviour {
 		node.Occupier = newUnit;
 		newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
 	}
-	
-	// Update is called once per frame
-	void Update() {
+
+    // Update is called once per frame
+    void Update()
+    {
         turnManager.Update();
-	}
+    }
 }

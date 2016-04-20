@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-public enum ButtonState { UnitFresh, UnitMoved, UnitActed, EnemyTurn, OurTurnNoSelection };
+public enum State { UnitFresh, UnitMoved, UnitActed, EnemyTurn, OurTurnNoSelection };
 
 class UIManager
 {
@@ -47,23 +47,23 @@ class UIManager
         return uiRef;
     }
 
-    public void ChangeButtonState(ButtonState b)
+    public void ChangeButtonState(State b)
     {
         switch(b)
         {
-            case ButtonState.UnitFresh:
+            case State.UnitFresh:
                 setButtonState(true, false, true);
                 break;
-            case ButtonState.UnitMoved:
+            case State.UnitMoved:
                 setButtonState(true, true, true);
                 break;
-            case ButtonState.UnitActed:
+            case State.UnitActed:
                 setButtonState(false, false, true);
                 break;
-            case ButtonState.EnemyTurn:
+            case State.EnemyTurn:
                 setButtonState(false, false, false);
                 break;
-            case ButtonState.OurTurnNoSelection:
+            case State.OurTurnNoSelection:
                 setButtonState(false, false, true);
                 break;
         }

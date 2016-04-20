@@ -15,7 +15,7 @@ public abstract class Unit {
 	PathFinder pathfinder;
 	const float doneDist = 0.07f;
 	const float diffDist = 1.2f;
-	static float maxSpeed = 12f;
+	static float maxSpeed = 24f;
 	float origDist = float.PositiveInfinity;
 	float minDist = float.PositiveInfinity;
 
@@ -106,6 +106,14 @@ public abstract class Unit {
         hasNotMovedThisTurn = false;
     }
 
+    public void resetTurn()
+    {
+        currentWater = maxWater;
+        hasNotMovedThisTurn = true;
+        canUndo = false;
+        callbackFunction = UnitAction.DontCallBack;
+    }
+
     /// <summary>
     /// Tries to undo an action. If successful, returns true, else false.
     /// </summary>
@@ -184,7 +192,7 @@ public abstract class Unit {
 
     public abstract string name();
 
-	public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, Node gridTile, bool e) {
+    public Unit(int clayAmount, int maximumWater, int bendinessFactor, int hardnessFactor, int attackRangeMin, int attackRangeMax, Node gridTile, bool e) {
 		clay = clayAmount;
 		currentWater = maxWater = maximumWater;
 		bendiness = bendinessFactor;
@@ -253,10 +261,12 @@ public abstract class Unit {
 	}
 
 	// Takes the attack from an enemy unit, returning the counter-attack and attack results.
+    // TODO: fix this weird attack problem
+    // on counters it attacks itself?
 	public List<AttackResult> takeAttackFrom(Unit enemy, int distance, bool firstAttack) {
 		Attack atk = new Attack(enemy, this);
 		List<AttackResult> attacks = new List<AttackResult>();
-		AttackResult result = new AttackResult(HitType.Miss, 0, false);
+		AttackResult result = new AttackResult(HitType.Miss, 0, false, atk);
 		AttackResult counter = new AttackResult(HitType.CannotCounter, 0, false);
 
 		if(Random.value <= atk.getHitChance()) {
@@ -286,6 +296,11 @@ public abstract class Unit {
 		return attacks;
 	}
 
+    public void Die()
+    {
+        Object.Destroy(spriteObject);
+    }
+
 	// Attacks the given enemy Unit
     // Removes undo capability since attack is non-reverseable.
 	public List<AttackResult> attack(Unit enemy, int distance) {
@@ -302,6 +317,11 @@ public abstract class Unit {
         clay = clayVal;
     }
 
+    public int ident()
+    {
+        return transform.gameObject.GetInstanceID();
+    }
+
     /// <summary>
     /// Sets the currentWater to this value.
     /// </summary>
@@ -310,14 +330,17 @@ public abstract class Unit {
     {
         currentWater = endurance;
     }
-
+    
     public override int GetHashCode()
     {
-        return transform.gameObject.GetHashCode();
+        return transform.gameObject.GetInstanceID().GetHashCode();
     }
 
     public override bool Equals(object obj)
     {
-        return transform.gameObject.Equals(obj);
+        Unit ok = obj as Unit;
+        if (ok == null)
+            return false;
+        return transform.gameObject.GetInstanceID() == ok.transform.gameObject.GetInstanceID();
     }
 }

@@ -80,9 +80,13 @@ namespace Graph
         /// <summary>
         /// Initializes the node for pathfinding.
         /// </summary>
-        public void initPathfinding()
+        public void initPathfinding(bool isPathfinding)
         {
-            Visited = Occupied;
+            if (isPathfinding)
+                Visited = Occupied;
+            else
+                Visited = false;
+
             CameFrom = null;
             realCost = double.PositiveInfinity;
             heuristicCost = double.PositiveInfinity;

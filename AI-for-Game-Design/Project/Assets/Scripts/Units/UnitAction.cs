@@ -52,15 +52,18 @@ class UnitAction
     /// Runs this action's attack.
     /// </summary>
     /// <param name="callbackFuncOnDone">The void action to run when done.</param>
-    public void Attack(Action callbackFuncOnDone)
+    public List<AttackResult> Attack(Action callbackFuncOnDone)
     {
+        List<AttackResult> results = new List<AttackResult>();
         if (enemyUnit != null)
         {
-            unitRef.attack(enemyUnit, Node.range(unitRef.getNode(), enemyUnit.getNode()));
+            results.AddRange(unitRef.attack(enemyUnit, Node.range(unitRef.getNode(), enemyUnit.getNode())));
         }
         
         if (callbackFuncOnDone != null)
             callbackFuncOnDone();
+
+        return results;
     }
 
     /// <summary>
@@ -73,11 +76,5 @@ class UnitAction
             unitRef.moveUnit(callbackFuncOnDone, moveNode);
         else
             unitRef.moveUnit(callbackFuncOnDone, moveNode);
-    }
-
-    public void DoAllActions(Action callbackFuncOnDone)
-    {
-        Action del = () => { Attack(callbackFuncOnDone); };
-        Move(del);
     }
 }
