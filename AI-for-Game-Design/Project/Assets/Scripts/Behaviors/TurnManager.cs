@@ -111,13 +111,16 @@ class TurnManager
 
         foreach (AttackResult ar in ars)
         {
-            Debug.Log("died: " + ar.ToString());
+            Unit unit = ar.target();
+            if (unit.isEnemy() != workingUnit.isEnemy())
+            {
+                pathFinder.highlightAttackedUnit(unit);
+            }
             if (ar.wasKilled())
             {
                 Unit died = ar.target();
                 if (died.Equals(workingUnit))
                 {
-                    wipeDisplay();
                     weDied = true;
                 }
                 if (died.isEnemy())
@@ -130,14 +133,6 @@ class TurnManager
                 }
                 died.Die();
             }
-            else
-            {
-                Unit didntDie = ar.target();
-                if (didntDie.isEnemy() != workingUnit.isEnemy())
-                {
-                    pathFinder.highlightAttackedUnit(didntDie);
-                }
-            }
         }
         if (!weDied)
         {
@@ -147,7 +142,7 @@ class TurnManager
         if (ars.Count > 0)
             delayTime = 37;
         else
-            delayTime = 3;
+            delayTime = 10;
 
         moving = false;
     }
@@ -158,6 +153,8 @@ class TurnManager
         // turn ended
         if (toActAI.Count == 0)
         {
+            // give extra time to see ending move of last turn.
+            delayTime *= 2;
             aiTurn = !aiTurn;
             if (aiTurn)
                 nextTurn(aiUnits);
@@ -165,7 +162,6 @@ class TurnManager
             {
                 selectionState = State.OurTurnNoSelection;
                 UIManager.getUIManager().ChangeButtonState(selectionState);
-                wipeDisplay();
                 nextTurn(playerUnits);
             }
         }
@@ -203,12 +199,16 @@ class TurnManager
         // player won!
         if (aiUnits.Count == 0)
         {
+            pathFinder.clearHighlightedNodes();
+            displayCurrentUnit(playerUnits[0]);
             UIManager.getUIManager().gameOver(true);
         }
 
         // ai won!
         if (playerUnits.Count == 0)
         {
+            pathFinder.clearHighlightedNodes();
+            displayCurrentUnit(aiUnits[0]);
             UIManager.getUIManager().gameOver(false);
         }
 
@@ -347,12 +347,34 @@ class TurnManager
             // disables all buttons while locked
             selectionState = State.EnemyTurn;
 
-            if (delayTime > 0)
+            if (!moving && delayTime > 0)
                 delayTime--;
             if (delayTime == 0)
             {
                 if (!aiTurn && !moving && toActAI.Count == 0)
+                {
                     selectionState = State.OurTurnNoSelection;
+                    // auto-select unit for player
+                    foreach (Unit u in playerUnits)
+                    {
+                        if (!u.hasActed())
+                        {
+                            wipeDisplay();
+                            if (unitSelected)
+                            {
+                                workingUnit.deselect();
+                            }
+                            unitSelected = true;
+                            workingUnit = u;
+                            displayCurrentUnit(workingUnit);
+                            workingUnit.select();
+
+                            pathFinder.displayRangeOfUnit(workingUnit, workingUnit.getNode().getPos());
+                            selectionState = State.UnitFresh;
+                            break;
+                        }
+                    }
+                }
             }
         }
 

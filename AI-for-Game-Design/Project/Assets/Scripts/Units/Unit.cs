@@ -13,9 +13,9 @@ public abstract class Unit {
 	// Fields for pathing control
 	Queue<Vector2> targets = new Queue<Vector2>();
 	PathFinder pathfinder;
-	const float doneDist = 0.07f;
+	const float doneDist = 0.09f;
 	const float diffDist = 1.2f;
-	static float maxSpeed = 18f;
+	static float maxSpeed = 15f;
 	float origDist = float.PositiveInfinity;
 	float minDist = float.PositiveInfinity;
 
@@ -152,7 +152,7 @@ public abstract class Unit {
 
 			//If we're done with this target, or not getting anywhere, dequeue the next target.
 			float newDist = Vector2.Distance(transform.position, currentTarget);
-			if (newDist < doneDist || newDist > minDist * diffDist)
+			if (newDist <= (doneDist * getMaxWater() / 12) || newDist > minDist * diffDist)
             {
 				transform.position = currentTarget;
 				targets.Dequeue();
@@ -284,13 +284,17 @@ public abstract class Unit {
 		AttackResult result = new AttackResult(HitType.Miss, 0, false, atk);
 		AttackResult counter = new AttackResult(HitType.CannotCounter, 0, false);
 
-        string statStr = "stats1 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
-        statStr += "\nstats1 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
+        string statStr = "stats1 this " + ident() + " called " + name() + ", clay: " + clay + ", endurance: " + currentWater;
+        statStr += "\nstats1 enemy " + enemy.ident() + " called " + enemy.name() + " clay: " + enemy.clay + ", endurance: " + enemy.currentWater;
         statStr += "\nAttack info: " + atk;
-        Debug.Log(statStr);
 
-        Debug.Log("taking attack from: " + ident() + ", enemy doing this: " + enemy.ident());
         string playType = (isEnemy()) ? "enemy" : "player";
+        string enType = (!isEnemy()) ? "enemy" : "player";
+        if (firstAttack)
+        {
+            Debug.Log("Blame! " + playType + " attacked by " + enType);
+        }
+        Debug.Log(statStr + "taking attack from: " + ident() + ", enemy doing this: " + enemy.ident());
 
         if (Random.value <= atk.getHitChance())
         {
@@ -313,20 +317,26 @@ public abstract class Unit {
         else
             Debug.Log(playType + " was Missed!");
 
-		if(clay <= 0)
-			result.setKilled(true);
-		// Only counter if it is the first attack in a set and the enemy's range allows it
-		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance)
-			counter = enemy.takeAttackFrom(this, distance, false)[0];
-
-		// Add this enemy's result first, then the counter result
-		attacks.Add(result);
-        if (counter.getType() != HitType.CannotCounter)
-		    attacks.Add(counter);
+        if (clay <= 0)
+        {
+            result.setKilled(true);
+            Debug.Log(playType + " was Killed!");
+        }
+        // Only counter if it is the first attack in a set and the enemy's range allows it
+        else if (firstAttack && getMinAttackRange() <= distance && getMaxAttackRange() >= distance)
+            counter = enemy.takeAttackFrom(this, distance, false)[0];
+        else if (firstAttack)
+            Debug.Log(enType + " was out of range of " + playType + "!");
 
         statStr = "\nstats2 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
         statStr += "\nstats2 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
-        Debug.Log(statStr);
+
+        // Add this enemy's result first, then the counter result
+        attacks.Add(result);
+        if (counter.getType() != HitType.CannotCounter)
+            attacks.Add(counter);
+        else
+            Debug.Log(playType + " didn't counter! ending stats: " + statStr);
         return attacks;
 	}
 

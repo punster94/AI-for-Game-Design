@@ -38,14 +38,14 @@ public class MainGame : MonoBehaviour {
         Vector2 botleft = pathFinder.getBottomLeftBound();
         Vector2 mid = topright - botleft;
         mid /= 3;
-        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 20);
+        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 7);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
             Node spawnEnemy = spawnPoints.Key[i];
             Node spawnAlly = spawnPoints.Value[i];
 
             float spawnType = Random.value;
-
+            
             if (spawnType < 0.3)
             {
                 addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
@@ -53,18 +53,18 @@ public class MainGame : MonoBehaviour {
             }
             else if (spawnType < 0.55)
             {
-                addBigGuyUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
-                addBigGuyUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
+                addBigGuyUnit(enemyUnits, enemyUnitObjects, "Enemy BigGuy", spawnEnemy, true);
+                addBigGuyUnit(allyUnits, allyUnitObjects, "Ally BigGuy", spawnAlly, false);
             }
-            else if (spawnType < 0.8)
+            else if (spawnType < 0.85)
             {
-                addLongRangeUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
-                addLongRangeUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
+                addLongRangeUnit(enemyUnits, enemyUnitObjects, "Enemy LongRange", spawnEnemy, true);
+                addLongRangeUnit(allyUnits, allyUnitObjects, "Ally LongRange", spawnAlly, false);
             }
             else
             {
-                addRunnerUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
-                addRunnerUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
+                addRunnerUnit(enemyUnits, enemyUnitObjects, "Enemy Runner", spawnEnemy, true);
+                addRunnerUnit(allyUnits, allyUnitObjects, "Ally Runner", spawnAlly, false);
             }
         }
 
