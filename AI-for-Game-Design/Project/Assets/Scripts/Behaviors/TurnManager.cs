@@ -31,7 +31,7 @@ class TurnManager
         Cancel.onClick.AddListener(onCancel);
         Wait.onClick.AddListener(onWait);
 
-        selectionState = State.UnitFresh;
+        selectionState = State.OurTurnNoSelection;
         UIManager.getUIManager().ChangeButtonState(selectionState);
 
         toActAI = new Queue<Unit>();
@@ -83,6 +83,7 @@ class TurnManager
         UIManager.getUIManager().ChangeButtonState(selectionState);
         workingUnit.hasActed(true);
         workingUnit.setMoved();
+        autoSelectPlayerUnit();
     }
     
     bool unitSelected = false;
@@ -95,6 +96,7 @@ class TurnManager
         moving = true;
     }
 
+    // this is the player's callback for move-only actions.
     public void playerCallback()
     {
         UIManager.getUIManager().setDisplayedUnit(workingUnit);
@@ -104,11 +106,11 @@ class TurnManager
         moving = false;
     }
 
+    // this is a callback that will attack the planned action square when called.
     public void attackSquare()
     {
         List<AttackResult> ars = currentAction.Attack(UnitAction.DontCallBack);
         bool weDied = false;
-
         foreach (AttackResult ar in ars)
         {
             Unit unit = ar.target();
@@ -118,33 +120,47 @@ class TurnManager
             }
             if (ar.wasKilled())
             {
-                Unit died = ar.target();
+                Unit died = unit;
                 if (died.Equals(workingUnit))
-                {
                     weDied = true;
-                }
-                if (died.isEnemy())
-                {
-                    aiUnits.Remove(died);
-                }
-                else
-                {
-                    playerUnits.Remove(died);
-                }
-                died.Die();
+                diedList.Add(died);
             }
         }
-        if (!weDied)
+        //cleanly display unit dead
+        if (weDied)
         {
-            displayCurrentUnit(workingUnit);
+            workingUnit.setClay(0);
+            workingUnit.setCurrentWater(0);
         }
+        displayCurrentUnit(workingUnit);
 
         if (ars.Count > 0)
-            delayTime = 37;
+            setDelay(37);
         else
-            delayTime = 10;
+            setDelay(10);
 
         moving = false;
+    }
+
+    private List<Unit> diedList = new List<Unit>();
+
+    // clears all units that died.
+    public void clearDiedUnits()
+    {
+        foreach (Unit died in diedList)
+        {
+            if (died.isEnemy())
+            {
+                aiUnits.Remove(died);
+            }
+            else
+            {
+                playerUnits.Remove(died);
+            }
+            died.Die();
+        }
+        wipeDisplay();
+        diedList.Clear();
     }
 
     public void attackSquareAIcallback()
@@ -154,7 +170,7 @@ class TurnManager
         if (toActAI.Count == 0)
         {
             // give extra time to see ending move of last turn.
-            delayTime *= 2;
+            setDelay(37);
             aiTurn = !aiTurn;
             if (aiTurn)
                 nextTurn(aiUnits);
@@ -180,9 +196,25 @@ class TurnManager
         pathFinder.displayRangeOfUnit(u, u.getNode().getPos());
         pathFinder.highlightSelectedUnit(u);
     }
+    
+    private int delayTime = 0;
 
-    // TODO: make attack not instant
-    int delayTime = 0;
+    private void decDelay()
+    {
+        delayTime--;
+    }
+
+    private void setDelay(int delaySteps)
+    {
+        delayTime = delaySteps;
+    }
+
+    private bool delayDone()
+    {
+        return delayTime <= 0;
+    }
+
+
     UnitAction currentAction;
     Unit workingUnit;
     Queue<Unit> toActAI;
@@ -202,6 +234,8 @@ class TurnManager
             pathFinder.clearHighlightedNodes();
             displayCurrentUnit(playerUnits[0]);
             UIManager.getUIManager().gameOver(true);
+            selectionState = State.EnemyTurn;
+            moving = true;
         }
 
         // ai won!
@@ -210,9 +244,11 @@ class TurnManager
             pathFinder.clearHighlightedNodes();
             displayCurrentUnit(aiUnits[0]);
             UIManager.getUIManager().gameOver(false);
+            selectionState = State.EnemyTurn;
+            moving = true;
         }
 
-        if (delayTime <= 0 && !moving)
+        if (delayDone() && !moving)
         {
             if (aiTurn && toActAI.Count == 0)
             {
@@ -268,11 +304,25 @@ class TurnManager
 
                         if (unitSelected)
                         {
-                            workingUnit.deselect();
-                            unitSelected = false;
-                            wipeDisplay();
-                            selectionState = State.OurTurnNoSelection;
+                            int range = Node.range(workingUnit.getNode(), clickedNode);
+
+                            // determines if the click was in range if range was displayed.
+                            bool clickedInRange = false;
+                            if (workingUnit.hasMoved())
+                                clickedInRange = range >= workingUnit.getMinAttackRange()
+                                              && range <= workingUnit.getMaxAttackRange();
+
+                            // don't auto select, the user clicked outside, deselect everything unless selected something else.
+                            // in case where mistakenly left-clicked in range, don't deselect as the user would get confused.
+                            if (!clickedInRange)
+                            {
+                                workingUnit.deselect();
+                                unitSelected = false;
+                                wipeDisplay();
+                                selectionState = State.OurTurnNoSelection;
+                            }
                         }
+
 
                         if (clickedNode.Occupied)
                         {
@@ -290,11 +340,6 @@ class TurnManager
                                 else
                                     selectionState = State.UnitFresh;
                             }
-                        }
-                        else
-                        {
-                            wipeDisplay();
-                            selectionState = State.OurTurnNoSelection;
                         }
                     }
                 }
@@ -336,49 +381,91 @@ class TurnManager
                                 workingUnit.moveUnit(playerCallback, clickedNode);
                             }
                         }
-                        
+                    }
+                    // clicked out range, we disable unit and select next unit appropriately.
+                    else
+                    {
+                        autoSelectPlayerUnit();
                     }
                 }
             }
-
         }
         else
         {
             // disables all buttons while locked
             selectionState = State.EnemyTurn;
 
-            if (!moving && delayTime > 0)
-                delayTime--;
-            if (delayTime == 0)
+            if (!moving && !delayDone())
+                decDelay();
+
+            // if coming back from delay, update animation, dead units, and selection appropriately.
+            if (delayDone())
             {
+                if (!moving)
+                    wipeDisplay();
+
+                if (diedList.Count > 0)
+                    clearDiedUnits();
+
+                // now player turn, auto-select unit for player if possible.
                 if (!aiTurn && !moving && toActAI.Count == 0)
                 {
-                    selectionState = State.OurTurnNoSelection;
-                    // auto-select unit for player
-                    foreach (Unit u in playerUnits)
-                    {
-                        if (!u.hasActed())
-                        {
-                            wipeDisplay();
-                            if (unitSelected)
-                            {
-                                workingUnit.deselect();
-                            }
-                            unitSelected = true;
-                            workingUnit = u;
-                            displayCurrentUnit(workingUnit);
-                            workingUnit.select();
-
-                            pathFinder.displayRangeOfUnit(workingUnit, workingUnit.getNode().getPos());
-                            selectionState = State.UnitFresh;
-                            break;
-                        }
-                    }
+                    autoSelectPlayerUnit();
                 }
             }
         }
 
         UIManager.getUIManager().ChangeButtonState(selectionState);
+    }
+
+    // attempts to auto-select the next valid player unit.
+    private void autoSelectPlayerUnit()
+    {
+        selectionState = State.OurTurnNoSelection;
+        wipeDisplay();
+
+        bool switchedUnit = false;
+
+        // if user clicked outside, disable auto select, as the user would think something crashed.
+        if (workingUnit != null && !workingUnit.hasActed() && !workingUnit.hasMoved())
+            return;
+
+        // auto-select unit for player
+        foreach (Unit u in playerUnits)
+        {
+            if (!u.hasActed() && !u.hasMoved())
+            {
+                if (unitSelected)
+                {
+                    workingUnit.deselect();
+                }
+                unitSelected = true;
+                workingUnit = u;
+                displayCurrentUnit(workingUnit);
+                workingUnit.select();
+
+                pathFinder.displayRangeOfUnit(workingUnit, workingUnit.getNode().getPos());
+                selectionState = State.UnitFresh;
+                switchedUnit = true;
+                break;
+            }
+        }
+
+        // auto next-turn
+        if (!switchedUnit)
+        {
+            // give extra time to see ending move of last turn.
+            setDelay(37);
+            aiTurn = !aiTurn;
+            if (aiTurn)
+                nextTurn(aiUnits);
+            else
+            {
+                selectionState = State.OurTurnNoSelection;
+                UIManager.getUIManager().ChangeButtonState(selectionState);
+                nextTurn(playerUnits);
+            }
+        }
     }
 
     private Vector2 getMousePos()

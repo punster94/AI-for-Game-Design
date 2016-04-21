@@ -44,8 +44,15 @@ public class Attack {
 
     public override string ToString()
     {
-        float ev = getDamage() * (1 - getCritChance()) + 3 * getDamage() * getCritChance();
-        ev *= getHitChance();
+        float ev = 0;
+        if (getHitChance() > 0)
+        {
+            if (getCritChance() > 0)
+                ev = getDamage() * (1 - getCritChance()) + 3 * getDamage() * getCritChance();
+            else
+                ev = getDamage();
+            ev *= getHitChance();
+        }
         return "Damage: " + damage + ", hitChance: " + hitChance + ", critChance: " + critChance + ", ev: " + ev;
     }
 }

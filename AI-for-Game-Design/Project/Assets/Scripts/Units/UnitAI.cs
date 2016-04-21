@@ -80,12 +80,16 @@ class UnitAI
         MinPriorityQueue<UnitAction> bestMoves = new MinPriorityQueue<UnitAction>();
         int realclay = subjectRef.getClay();
 
+        string counter = "I, " + subjectRef.ident() + " am evaluating moves.\n";
+        int round = 0;
+
         // The "max-y" part: maximize (damage/counter-damage)
         foreach (Node.NodePointer candidateAttackTarget in targets)
         {
             int moveCost = candidateAttackTarget.getDist();
 
             Unit curEnemy = candidateAttackTarget.getTarget().Occupier;
+            counter += "round " + round++ + ": attacking " + curEnemy.ident() +"\n";
 
             AttackRound util = new AttackRound(subjectRef, moveCost, curEnemy);
 
@@ -95,12 +99,12 @@ class UnitAI
             int totDmg = 0;
 
             // Will very likely die, enqueue this move as bad, and don't move to next step.
-            //TODO: utility = 0
             if (util.attackerDies() || util.getUtility() == 0)
             {
                 bestMoves.Enqueue(roundMove, double.PositiveInfinity);
                 util.resetBack();
                 subjectRef.setClay(realclay);
+                counter += "\nround failed, 1st stage.";
                 continue;
             }
 
@@ -113,13 +117,25 @@ class UnitAI
             {
                 if (enemy.getClay() > 0 && pathManager.canAttack(enemy, candidateAttackTarget.getStart()))
                 {
-                    //gets the closest move. This will be the move that maxes damage.
+                    // save current enemy water state.
+                    int curEnemyWater = enemy.getCurrentWater();
+                    enemy.setCurrentWater(enemy.getMaxWater());
+                    // gets the closest move. This will be the move that maxes damage.
                     int enemyMoveCost = pathManager.maxDamageMoveCost(enemy, candidateAttackTarget.getStart());
                     AttackRound subRound = new AttackRound(enemy, enemyMoveCost, subjectRef);
                     int roundClay = subjectRef.getClay();
 
+                    // reset enemy state.
                     subRound.resetBack();
+                    enemy.setCurrentWater(curEnemyWater);
                     subjectRef.setClay(roundClay);
+
+                    if (!subjectRef.isEnemy())
+                    {
+                        counter += "i, " + subjectRef.ident() + " will be attacked by ";
+                        counter += enemy.ident() + ", expected damage = " + subRound.getExpectedDamage();
+                        counter += ", expected damage from us = " + subRound.getExpectedCounterDamage() + "\n";
+                    }
 
                     // If we die, break early, as usual.
                     if (util.defenderDies())
@@ -129,17 +145,40 @@ class UnitAI
 
                     totDmg += subRound.getExpectedCounterDamage();
                 }
+                else if (!subjectRef.isEnemy())
+                {
+                    counter += "i, " + subjectRef.ident() + " will not be attacked by " + enemy.ident() + " this turn., as\n";
+                    if (enemy.getClay() <= 0)
+                        counter += " the enemy will have been killed by me!";
+                    else
+                        counter += " the enemy cannot reach me!";
+                }
             }
 
             // Died. Enqueue with +inf again.
-            if (subjectRef.getClay() == 0)
+            if (subjectRef.getClay() <= 0)
+            {
                 bestMoves.Enqueue(roundMove, double.PositiveInfinity);
+                counter += "round failed, 2nd stage.\n";
+            }
             // enqueue move! min pri queue, so invert answer.
             else
-                bestMoves.Enqueue(roundMove, -((double)totDmg / subjectRef.getClay()));
+            {
+                bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()));
+                counter += "round succeeded, value of " + -(double) totDmg * subjectRef.getClay() + "\n";
+            }
             
             util.resetBack();
             subjectRef.setClay(realclay);
+        }
+
+        if (counter.Length > 0)
+        {
+            if (bestMoves.Count > 0)
+                counter += "Expected value of best move: " + bestMoves.currentInversePriority(bestMoves.Peek());
+            else
+                counter += "No best moves.";
+            UnityEngine.Debug.Log(counter);
         }
 
         subjectRef.setClay(realclay);

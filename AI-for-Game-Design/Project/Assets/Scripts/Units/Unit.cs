@@ -15,7 +15,7 @@ public abstract class Unit {
 	PathFinder pathfinder;
 	const float doneDist = 0.09f;
 	const float diffDist = 1.2f;
-	static float maxSpeed = 15f;
+	static float maxSpeed = 40f;
 	float origDist = float.PositiveInfinity;
 	float minDist = float.PositiveInfinity;
 
@@ -144,15 +144,18 @@ public abstract class Unit {
     /// <summary>
     /// Updates the current seeking location.
     /// </summary>
-    private void updateSeek() {
+    private void updateSeek()
+    {
 		// Seek method
-        // TODO: fix multiseek units
-		if(targets.Count > 0) {
+		if(targets.Count > 0)
+        {
 			Vector2 currentTarget = targets.Peek();
 
 			//If we're done with this target, or not getting anywhere, dequeue the next target.
 			float newDist = Vector2.Distance(transform.position, currentTarget);
-			if (newDist <= (doneDist * getMaxWater() / 12) || newDist > minDist * diffDist)
+            float moveDist = Time.deltaTime * doneDist * getMaxWater() * maxSpeed / 12 * 5.0f;
+
+            if (newDist <= moveDist || newDist > minDist * diffDist)
             {
 				transform.position = currentTarget;
 				targets.Dequeue();
@@ -172,10 +175,11 @@ public abstract class Unit {
                 }
             }
 			//Otherwise continue making our way towards the target.
-			else {
+			else
+            {
 				transform.Rotate(Vector3.forward,
 					getAbsoluteAngle(transform.up, currentTarget - (Vector2)(transform.position)));
-				transform.position += transform.up.normalized * Time.deltaTime * doneDist * getMaxWater() * maxSpeed / 12 * 5.0f;
+                transform.position += transform.up.normalized * moveDist;
 				if (newDist < minDist)
 					minDist = newDist + diffDist;
 			}

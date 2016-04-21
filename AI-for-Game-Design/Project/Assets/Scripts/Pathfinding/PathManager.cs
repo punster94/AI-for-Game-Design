@@ -33,7 +33,7 @@ namespace Graph
             private PathFinder pathFinderRef;
             private readonly Unit uRef;
 
-            public PathMemoizer(PathFinder p, Unit unitRef)
+            public PathMemoizer(PathFinder p, Unit unitRef, bool enemyTeam = false)
             {
                 uRef = unitRef;
                 pathFinderRef = p;
@@ -45,12 +45,18 @@ namespace Graph
                 reverseNodesInRangeSetCost = new Dictionary<Node, int>();
                 currentTargets = new List<Node.NodePointer>();
 
-                initialize(unitRef.getNode(), unitRef.getCurrentWater());
+                float waterval = 0;
+                if (enemyTeam)
+                    waterval = unitRef.getMaxWater();
+                else
+                    waterval = unitRef.getCurrentWater();
+
+                initialize(unitRef.getNode(), waterval, enemyTeam);
             }
 
-            private void initialize(Node start, float endurance)
+            private void initialize(Node start, float endurance, bool canWalkThroughUnits)
             {
-                pathFinderRef.nodesThatSatisfyPred(start, pathfindPredicate, endurance);
+                pathFinderRef.nodesThatSatisfyPred(start, pathfindPredicate, endurance, false, !canWalkThroughUnits);
                 foreach (Node n in nodesCanWalkTo)
                 {
                     shootingFrom = n;
@@ -156,7 +162,7 @@ namespace Graph
 
             foreach (Unit e in enemies)
             {
-                enemyMemoizer.Add(e, new PathMemoizer(pathFinderRef, e));
+                enemyMemoizer.Add(e, new PathMemoizer(pathFinderRef, e, true));
             }
         }
 
