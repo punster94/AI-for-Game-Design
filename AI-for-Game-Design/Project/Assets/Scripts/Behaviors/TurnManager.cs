@@ -222,8 +222,14 @@ class TurnManager
 
     private void nextTurn(List<Unit> toReset)
     {
-        foreach (Unit u in toReset)
-            u.resetTurn();
+        if (toReset.Count > 0)
+        {
+            foreach (Unit u in toReset)
+                u.resetTurn();
+            // allows the display of enemy range
+            foreach (Unit e in aiUnits)
+                e.setMoved(true);
+        }
     }
 
     public void Update()

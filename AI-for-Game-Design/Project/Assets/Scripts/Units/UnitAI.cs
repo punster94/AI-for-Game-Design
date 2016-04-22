@@ -71,7 +71,7 @@ class UnitAI
     private enum Result { Success = 0, NothingFound = 1, WillDie = 2 }
 
     /// <summary>
-    /// Runs MinMax on a unit.
+    /// Runs MinMax on a unit, judging running vs fighting.
     /// </summary>
     /// <returns>A result-UnitAction pair.</returns>
     private KeyValuePair<Result, UnitAction> MinMax()
@@ -92,14 +92,13 @@ class UnitAI
             counter += "round " + round++ + ": attacking " + curEnemy.ident() +"\n";
 
             AttackRound util = new AttackRound(subjectRef, moveCost, curEnemy);
-
-
+            
             UnitAction roundMove = new UnitAction(subjectRef, curEnemy, candidateAttackTarget.getStart());
 
             int totDmg = 0;
 
             // Will very likely die, enqueue this move as bad, and don't move to next step.
-            if (util.attackerDies() || util.getUtility() == 0)
+            if (util.attackerDies())
             {
                 bestMoves.Enqueue(roundMove, double.PositiveInfinity);
                 util.resetBack();
@@ -110,50 +109,7 @@ class UnitAI
 
             totDmg += util.getExpectedDamage();
 
-            // Loop through all things that could attack this position, and continue testing attacks.
-            // The "min-y" part. Enemy tries to maximize their (damage/counter-damage)
-            // Technically could just do damage maximization, since counter-damage is fixed.
-            foreach (Unit enemy in subjectsEnemiesRef)
-            {
-                if (enemy.getClay() > 0 && pathManager.canAttack(enemy, candidateAttackTarget.getStart()))
-                {
-                    // save current enemy water state.
-                    int curEnemyWater = enemy.getCurrentWater();
-                    enemy.setCurrentWater(enemy.getMaxWater());
-                    // gets the closest move. This will be the move that maxes damage.
-                    int enemyMoveCost = pathManager.maxDamageMoveCost(enemy, candidateAttackTarget.getStart());
-                    AttackRound subRound = new AttackRound(enemy, enemyMoveCost, subjectRef);
-                    int roundClay = subjectRef.getClay();
-
-                    // reset enemy state.
-                    subRound.resetBack();
-                    enemy.setCurrentWater(curEnemyWater);
-                    subjectRef.setClay(roundClay);
-
-                    if (!subjectRef.isEnemy())
-                    {
-                        counter += "i, " + subjectRef.ident() + " will be attacked by ";
-                        counter += enemy.ident() + ", expected damage = " + subRound.getExpectedDamage();
-                        counter += ", expected damage from us = " + subRound.getExpectedCounterDamage() + "\n";
-                    }
-
-                    // If we die, break early, as usual.
-                    if (util.defenderDies())
-                    {
-                        break;
-                    }
-
-                    totDmg += subRound.getExpectedCounterDamage();
-                }
-                else if (!subjectRef.isEnemy())
-                {
-                    counter += "i, " + subjectRef.ident() + " will not be attacked by " + enemy.ident() + " this turn., as\n";
-                    if (enemy.getClay() <= 0)
-                        counter += " the enemy will have been killed by me!";
-                    else
-                        counter += " the enemy cannot reach me!";
-                }
-            }
+            totDmg += RunEnemyTurn(candidateAttackTarget.getStart());
 
             // Died. Enqueue with +inf again.
             if (subjectRef.getClay() <= 0)
@@ -172,6 +128,35 @@ class UnitAI
             subjectRef.setClay(realclay);
         }
 
+        // If we're going to die, try to look for spot to run away to.
+        if (bestMoves.Count > 0 && bestMoves.currentInversePriority(bestMoves.Peek()) == double.PositiveInfinity)
+            // The "max-y" part: maximize (damage/counter-damage)
+            foreach (Node candidateRunSquare in pathManager.getAccessibleNodes(subjectRef))
+            {
+                round++;
+                int moveCost = pathManager.costOfSquare(subjectRef, candidateRunSquare);
+                float totDmg = 0.01f;
+                UnitAction roundMove = new UnitAction(subjectRef, null, candidateRunSquare);
+
+                totDmg += RunEnemyTurn(candidateRunSquare);
+
+                // Died. Enqueue with +inf again.
+                if (subjectRef.getClay() <= 0)
+                {
+                    bestMoves.Enqueue(roundMove, double.PositiveInfinity);
+                    counter += "round failed, 2nd stage.\n";
+                }
+                // enqueue move! min pri queue, so invert answer.
+                else
+                {
+                    bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()));
+                    counter += "round succeeded, value of " + -(double)totDmg * subjectRef.getClay() + "\n";
+                }
+                
+                subjectRef.setClay(realclay);
+            }
+
+
         if (counter.Length > 0)
         {
             if (bestMoves.Count > 0)
@@ -186,11 +171,52 @@ class UnitAI
         // no local targets...
         if (bestMoves.Count == 0)
             return new KeyValuePair<Result, UnitAction>(Result.NothingFound, null);
-        // all moves die. only move is not to play.
-        else if (bestMoves.currentInversePriority(bestMoves.Peek()) == double.PositiveInfinity)
-            return new KeyValuePair<Result, UnitAction>(Result.WillDie, bestMoves.Peek());
+        // all moves die, including running away! fight to the death!
+        //else if (bestMoves.currentInversePriority(bestMoves.Peek()) == double.PositiveInfinity)
+        //    return new KeyValuePair<Result, UnitAction>(Result.WillDie, bestMoves.Peek());
         // found good target.
         return new KeyValuePair<Result, UnitAction>(Result.Success, bestMoves.Peek());
+    }
+
+    // Loop through all things that could attack this position, and continue testing attacks.
+    // The "min-y" part. Enemy tries to maximize their (damage/counter-damage)
+    // Note: because there is no teamwork, units guestimate that a unit far away might not come to attack them always.
+    private int RunEnemyTurn(Node weWillBeAt)
+    {
+        int totDmg = 0;
+        foreach (Unit enemy in subjectsEnemiesRef)
+        {
+            if (enemy.getClay() > 0 && pathManager.canAttack(enemy, weWillBeAt))
+            {
+                // save current enemy water state.
+                int curEnemyWater = enemy.getCurrentWater();
+                enemy.setCurrentWater(enemy.getMaxWater());
+                // gets the closest move. This will be the move that maxes damage.
+                int enemyMoveCost = pathManager.maxDamageMoveCost(enemy, weWillBeAt);
+
+                int prevClay = subjectRef.getClay();
+
+                //guestimation: if removed, significant performance cost imposed, although becomes more like minmax.
+                float probability = UnityEngine.Mathf.Min(enemyMoveCost / 1.4f, enemy.getMaxWater() / 2);
+                probability /= enemy.getMaxWater();
+                probability = 1 - probability;
+
+                AttackRound subRound = new AttackRound(enemy, enemyMoveCost, subjectRef);
+                int roundClay = subjectRef.getClay();
+                int usCost = UnityEngine.Mathf.RoundToInt((probability) * (prevClay - roundClay));
+
+                // reset enemy state.
+                subRound.resetBack();
+                enemy.setCurrentWater(curEnemyWater);
+                subjectRef.setClay(prevClay - usCost);
+
+                totDmg += subRound.getExpectedCounterDamage();
+
+                if (subjectRef.getClay() <= 0)
+                    return totDmg;
+            }
+        }
+        return totDmg;
     }
 
     private KeyValuePair<Result, UnitAction> FindUnit()

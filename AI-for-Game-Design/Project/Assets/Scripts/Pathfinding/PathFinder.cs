@@ -1027,7 +1027,7 @@ namespace Graph
 
             List<Node> reach;
             if (!u.hasMoved())
-                reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getCurrentWater());
+                reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), u.getMaxWater());
             else
                 reach = nodesWithinEnduranceValue(closestMostValidNode(mousePosition), 0);
 

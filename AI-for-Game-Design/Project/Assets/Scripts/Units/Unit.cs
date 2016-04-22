@@ -15,7 +15,7 @@ public abstract class Unit {
 	PathFinder pathfinder;
 	const float doneDist = 0.09f;
 	const float diffDist = 1.2f;
-	static float maxSpeed = 40f;
+	static float maxSpeed = 18f;
 	float origDist = float.PositiveInfinity;
 	float minDist = float.PositiveInfinity;
 
@@ -115,9 +115,9 @@ public abstract class Unit {
         return !hasNotMovedThisTurn;
     }
 
-    public void setMoved()
+    public void setMoved(bool moved = false)
     {
-        hasNotMovedThisTurn = false;
+        hasNotMovedThisTurn = moved;
     }
 
     /// <summary>
