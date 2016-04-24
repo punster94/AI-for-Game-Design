@@ -165,10 +165,11 @@ namespace Graph
 
             // Determine correct node density
             float xDist = upperRightBound.x - lowerLeftBound.x;
+            nodeDensity = 0.75f;
             nodeDensity = numXNodes / xDist;
 
             // Magic number allows for proper drawing of nodes.
-            radii = 0.75f / nodeDensity;
+            radii = 0.375f / nodeDensity;
             
             numValidNodes = 0;
 
@@ -1043,7 +1044,7 @@ namespace Graph
 			{
 				//make slightly smaller to show square off
 				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-				q.setColor(new Color(0, 0.5f, 0, 0.75f));
+				q.setColor(new Color(0, 0.5f, 0, 0.9f));
 
 				overlayNodes.Add(q);
 			}
@@ -1052,7 +1053,7 @@ namespace Graph
 			{
 				//make slightly smaller to show square off
 				Node q = new Node(transform.gameObject, nodeImg, n.getPos(), n.getGridPos(), Node.randWalkState(), radii * 1.75f);
-				q.setColor(new Color(0, 0, 0.5f, 0.75f));
+				q.setColor(new Color(0, 0, 0.5f, 0.9f));
 
 				overlayNodes.Add(q);
 			}

@@ -31,7 +31,8 @@ public class MainGame : MonoBehaviour {
 
         // pathManager = new GraphManager(parent);
 		PCG generator = new PCG();
-		pathManager = new GraphManager(parent, generator.generateMap());
+        pathManager = //new GraphManager(parent); 
+            new GraphManager(parent, generator.generateMap());
 
         pathFinder = pathManager.getGraph();
 

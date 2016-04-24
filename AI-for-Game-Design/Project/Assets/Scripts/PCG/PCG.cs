@@ -6,7 +6,7 @@ using Graph;
 
 public class PCG {
 	// TODO: Might replace these with a #define
-	int randomSeed = 69;
+	int randomSeed;
 	int mapWidth = 39;
 	int mapHeight = 24;
 	// TODO: Fine-tune frequencies
@@ -28,7 +28,9 @@ public class PCG {
 	public PCG()
 	{
 		root = PCGnode.getOrigin(mapWidth, mapHeight);
-	}
+        randomSeed = (int)System.DateTime.Now.Ticks;
+        Debug.Log("Seed: " + randomSeed);
+    }
 
 	private Node.SquareType randomOther(Node.SquareType given)
 	{
