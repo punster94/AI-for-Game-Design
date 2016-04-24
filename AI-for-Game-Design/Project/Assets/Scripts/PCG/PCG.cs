@@ -19,7 +19,7 @@ public class PCG {
 	// something different from its room-define type.
 	int roomInteriorVariance = 5;
 
-	int wallSparseness = 3; // A wall will have a 1 in "wallSparseness" chance of spawning
+	float wallSparseness = 0.2f; // A wall will have a 1 in "wallSparseness" chance of spawning
 	int numSquareTypes = System.Enum.GetNames(typeof(Node.SquareType)).Length; // readability
 
 	public enum SplitDirection { Horizontal, Vertical };
@@ -79,7 +79,7 @@ public class PCG {
 			PCGnode temp = nodesToProcess.Dequeue();
 
 			int r = Random.Range(0, 2);
-			float ratio = Random.value;
+			float ratio = Random.value / 3 + 0.33f;
 #if DEBUG_PCG
 			Debug.Log("temp = " + temp.ToString());
 			Debug.Log("Generated pair: r = " + r + ", ratio = " + ratio);
@@ -143,7 +143,7 @@ public class PCG {
 					// Have a chance of generating a wall tile at the edge of the "room"
 					else if ((OffsetX == currentNode.Width - 1) || (OffsetY == currentNode.Height - 1))
 					{
-						if (Random.Range(0, wallSparseness) == 0)
+						if (Random.value > wallSparseness)
 						{
 #if DEBUG_PCG
 							Debug.Log("Making interal wall");
