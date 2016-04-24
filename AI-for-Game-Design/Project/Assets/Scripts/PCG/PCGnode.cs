@@ -5,8 +5,8 @@ using Graph;
 public class PCGnode {
 	// Static variables
 	// TODO: Could maybe replace these with a #define, but I'm not sure it'd make much difference
-	private static int minWidth = 2;
-	private static int minHeight = 2;
+	private static int minWidth = 5;
+	private static int minHeight = 5;
 	public static int MinWidth { get { return PCGnode.minWidth; } }
 	public static int MinHeight { get { return PCGnode.minHeight; } }
 

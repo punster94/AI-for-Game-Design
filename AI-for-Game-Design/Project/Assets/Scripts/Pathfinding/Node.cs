@@ -156,6 +156,16 @@ namespace Graph
             return SquareType.Unwalkable;
         }
 
+        public static SquareType randWalkable()
+        {
+            float randVal = Random.value;
+            if (randVal < 0.13)
+                return SquareType.Slippery;
+            if (randVal < 0.19)
+                return SquareType.Sandpaper;
+            return SquareType.TableDef;
+        }
+
         public bool isWalkable()
         {
             return terrainType != SquareType.Unwalkable;
