@@ -30,9 +30,11 @@ public class PCG {
 		root = PCGnode.getOrigin(mapWidth, mapHeight);
         randomSeed = (int)System.DateTime.Now.Ticks;
         Debug.Log("Seed: " + randomSeed);
+        // Good seeds:
+        // flat area: -999266259
     }
 
-	private Node.SquareType randomOther(Node.SquareType given)
+    private Node.SquareType randomOther(Node.SquareType given)
 	{
 #if DEBUG_PCG
 		int tries = 0;
@@ -115,7 +117,7 @@ public class PCG {
 			// Grab a PCGnode
 			PCGnode currentNode = finalNodes.Dequeue();
 			// generateMap a floor type from zero to number of tile types defined
-			Node.SquareType floorType = (Node.SquareType)Random.Range((int)0, numSquareTypes - 1);
+			Node.SquareType floorType = Node.randWalkState();
 #if DEBUG_PCG
 			Debug.Log("Random.Range(0," + (numSquareTypes - 1)+") = "+floorType);
 #endif
