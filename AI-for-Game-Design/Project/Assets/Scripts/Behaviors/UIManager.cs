@@ -101,10 +101,30 @@ class UIManager
         UnitName.text = "Name: " + uRef.name();
         UnitName.color = (uRef.isEnemy()) ? Color.red : Color.black;
         UnitClay.text = "Clay: " + uRef.getClay();
+        UnitClay.color = (uRef.getClay() > 0) ? (new Color(0, 0, 0, 0.75f)) : Color.red;
         UnitWater.text = "Water: " + uRef.getCurrentWater();
         UnitBendiness.text = "Bendiness: " + uRef.getBendiness();
         UnitHardness.text = "Hardness: " + uRef.getHardness();
         UnitRangeNotation.text = "Range: [" + uRef.getMinAttackRange() + ", " + uRef.getMaxAttackRange() + "]";
+    }
+
+    public void gameOver(bool playerWon)
+    {
+        if (playerWon)
+        {
+            UnitName.text = "Player Won!";
+            UnitName.color = Color.black;
+        }
+        else
+        {
+            UnitName.text = "Enemy Won. :(";
+            UnitName.color = Color.red;
+        }
+        UnitClay.text = "Credits:";
+        UnitWater.text = "Louis Hofer";
+        UnitBendiness.text = "Jacob Cassagnol";
+        UnitHardness.text = "Ken Mortimer";
+        UnitRangeNotation.text = "+ Lisa & Ali!";
     }
     
     public void clearDisplay()

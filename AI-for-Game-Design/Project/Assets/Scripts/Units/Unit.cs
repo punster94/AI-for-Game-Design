@@ -13,7 +13,7 @@ public abstract class Unit {
 	// Fields for pathing control
 	Queue<Vector2> targets = new Queue<Vector2>();
 	PathFinder pathfinder;
-	const float doneDist = 0.07f;
+	const float doneDist = 0.09f;
 	const float diffDist = 1.2f;
 	static float maxSpeed = 18f;
 	float origDist = float.PositiveInfinity;
@@ -51,23 +51,6 @@ public abstract class Unit {
 	// TODO: Make a check to only path to a spot that is in range AND unoccupied
 	// TODO: We also want to make sure the user can undo moves before completely committing to them
 	public void Update() {
-        /*
-        // TODO: Remove this logic, replace with only updateSeek();
-		if(currentlySelected && hasNotMovedThisTurn) {
-			if(Input.GetMouseButtonDown((int)MouseButton.right)) {
-				//AStar pathfinding
-				targets.Clear();
-				Queue<Node> path = new Queue<Node>();
-				double cost = getPathFinder().AStar(path, transform.position, getMousePos());
-                if (cost > currentWater)
-                    return;
-				foreach(Node n in path)
-					targets.Enqueue(new Vector2 (n.getPos().x, n.getPos().y));
-                currentWater -= (int) cost;
-				//hasNotMovedThisTurn = false;
-			}
-		}*/
-
 		updateSeek();
 	}
 
@@ -115,6 +98,27 @@ public abstract class Unit {
         canUndo = false;
         callbackFunction = UnitAction.DontCallBack;
     }
+    
+    // if it has acted, it can't undo.
+    public bool hasActed()
+    {
+        return !(canUndo || hasNotMovedThisTurn);
+    }
+
+    public void hasActed(bool ha)
+    {
+        canUndo = !ha;
+    }
+
+    public bool hasMoved()
+    {
+        return !hasNotMovedThisTurn;
+    }
+
+    public void setMoved(bool moved = false)
+    {
+        hasNotMovedThisTurn = moved;
+    }
 
     /// <summary>
     /// Tries to undo an action. If successful, returns true, else false.
@@ -123,7 +127,10 @@ public abstract class Unit {
     public bool undoIfPossible() {
         if (canUndo)
         {
+            node.Occupier = null;
             node = prevNode;
+            node.Occupier = this;
+            transform.position = node.getPos();
             hasNotMovedThisTurn = true;
             currentWater += storedCostOfMove;
             callbackFunction = UnitAction.DontCallBack;
@@ -137,15 +144,18 @@ public abstract class Unit {
     /// <summary>
     /// Updates the current seeking location.
     /// </summary>
-    private void updateSeek() {
+    private void updateSeek()
+    {
 		// Seek method
-        // TODO: fix multiseek units
-		if(targets.Count > 0) {
+		if(targets.Count > 0)
+        {
 			Vector2 currentTarget = targets.Peek();
 
 			//If we're done with this target, or not getting anywhere, dequeue the next target.
 			float newDist = Vector2.Distance(transform.position, currentTarget);
-			if (newDist < doneDist || newDist > minDist * diffDist)
+            float moveDist = Time.deltaTime * doneDist * getMaxWater() * maxSpeed / 12 * 5.0f;
+
+            if (newDist <= moveDist || newDist > minDist * diffDist)
             {
 				transform.position = currentTarget;
 				targets.Dequeue();
@@ -165,10 +175,11 @@ public abstract class Unit {
                 }
             }
 			//Otherwise continue making our way towards the target.
-			else {
+			else
+            {
 				transform.Rotate(Vector3.forward,
 					getAbsoluteAngle(transform.up, currentTarget - (Vector2)(transform.position)));
-				transform.position += transform.up.normalized * Time.deltaTime * doneDist * maxSpeed * 5.0f;
+                transform.position += transform.up.normalized * moveDist;
 				if (newDist < minDist)
 					minDist = newDist + diffDist;
 			}
@@ -277,13 +288,17 @@ public abstract class Unit {
 		AttackResult result = new AttackResult(HitType.Miss, 0, false, atk);
 		AttackResult counter = new AttackResult(HitType.CannotCounter, 0, false);
 
-        string statStr = "stats1 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
-        statStr += "\nstats1 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
+        string statStr = "stats1 this " + ident() + " called " + name() + ", clay: " + clay + ", endurance: " + currentWater;
+        statStr += "\nstats1 enemy " + enemy.ident() + " called " + enemy.name() + " clay: " + enemy.clay + ", endurance: " + enemy.currentWater;
         statStr += "\nAttack info: " + atk;
-        Debug.Log(statStr);
 
-        Debug.Log("taking attack from: " + ident() + ", enemy doing this: " + enemy.ident());
         string playType = (isEnemy()) ? "enemy" : "player";
+        string enType = (!isEnemy()) ? "enemy" : "player";
+        if (firstAttack)
+        {
+            Debug.Log("Blame! " + playType + " attacked by " + enType);
+        }
+        Debug.Log(statStr + "taking attack from: " + ident() + ", enemy doing this: " + enemy.ident());
 
         if (Random.value <= atk.getHitChance())
         {
@@ -306,19 +321,26 @@ public abstract class Unit {
         else
             Debug.Log(playType + " was Missed!");
 
-		if(clay <= 0)
-			result.setKilled(true);
-		// Only counter if it is the first attack in a set and the enemy's range allows it
-		else if(firstAttack && enemy.getMinAttackRange() <= distance && enemy.getMaxAttackRange() >= distance)
-			counter = enemy.takeAttackFrom(this, distance, false)[0];
-
-		// Add this enemy's result first, then the counter result
-		attacks.Add(result);
-		attacks.Add(counter);
+        if (clay <= 0)
+        {
+            result.setKilled(true);
+            Debug.Log(playType + " was Killed!");
+        }
+        // Only counter if it is the first attack in a set and the enemy's range allows it
+        else if (firstAttack && getMinAttackRange() <= distance && getMaxAttackRange() >= distance)
+            counter = enemy.takeAttackFrom(this, distance, false)[0];
+        else if (firstAttack)
+            Debug.Log(enType + " was out of range of " + playType + "!");
 
         statStr = "\nstats2 this " + ident() + ", clay: " + clay + ", endurance: " + currentWater;
         statStr += "\nstats2 enemy " + enemy.ident() + ", clay: " + enemy.clay + ", endurance: " + currentWater;
-        Debug.Log(statStr);
+
+        // Add this enemy's result first, then the counter result
+        attacks.Add(result);
+        if (counter.getType() != HitType.CannotCounter)
+            attacks.Add(counter);
+        else
+            Debug.Log(playType + " didn't counter! ending stats: " + statStr);
         return attacks;
 	}
 

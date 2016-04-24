@@ -41,14 +41,34 @@ public class MainGame : MonoBehaviour {
         Vector2 botleft = pathFinder.getBottomLeftBound();
         Vector2 mid = topright - botleft;
         mid /= 3;
-        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 5);
+        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 6);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
             Node spawnEnemy = spawnPoints.Key[i];
             Node spawnAlly = spawnPoints.Value[i];
 
-			addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
-			addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
+            float spawnType = Random.value;
+            
+            if (spawnType < 0.3)
+            {
+                addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
+                addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
+            }
+            else if (spawnType < 0.55)
+            {
+                addBigGuyUnit(enemyUnits, enemyUnitObjects, "Enemy BigGuy", spawnEnemy, true);
+                addBigGuyUnit(allyUnits, allyUnitObjects, "Ally BigGuy", spawnAlly, false);
+            }
+            else if (spawnType < 0.85)
+            {
+                addLongRangeUnit(enemyUnits, enemyUnitObjects, "Enemy LongRange", spawnEnemy, true);
+                addLongRangeUnit(allyUnits, allyUnitObjects, "Ally LongRange", spawnAlly, false);
+            }
+            else
+            {
+                addRunnerUnit(enemyUnits, enemyUnitObjects, "Enemy Runner", spawnEnemy, true);
+                addRunnerUnit(allyUnits, allyUnitObjects, "Ally Runner", spawnAlly, false);
+            }
         }
 
         enemyUnits.Reverse();
@@ -57,13 +77,37 @@ public class MainGame : MonoBehaviour {
         turnManager = new TurnManager(pathFinder, allyUnits, enemyUnits);
 	}
 
-	void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy) {
+	void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
 		Unit newUnit = new LongArmUnit(bucket, name, node, enemy);
 		units.Add(newUnit);
 		node.Occupier = newUnit;
 		newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
 	}
+    
+    void addBigGuyUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
+        Unit newUnit = new BigGuyUnit(bucket, name, node, enemy);
+        units.Add(newUnit);
+        node.Occupier = newUnit;
+        newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
+    }
 
+    void addRunnerUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
+        Unit newUnit = new RunnerUnit(bucket, name, node, enemy);
+        units.Add(newUnit);
+        node.Occupier = newUnit;
+        newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
+    }
+
+    void addLongRangeUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
+        Unit newUnit = new LongRangeUnit(bucket, name, node, enemy);
+        units.Add(newUnit);
+        node.Occupier = newUnit;
+        newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
+    }
     // Update is called once per frame
     void Update()
     {

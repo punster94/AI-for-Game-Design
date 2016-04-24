@@ -13,10 +13,11 @@ public class AttackRound {
 
     int waterAtk;
     int clayDef;
+    int clayAtk;
 
-	// Sets damage done by one round of attacking.
+    // Sets damage done by one round of attacking.
     // Must be re-set after doing this; assumes within countering range.
-	public AttackRound(Unit attackerIn, int attackerWaterCost, Unit defenderIn) {
+    public AttackRound(Unit attackerIn, int attackerWaterCost, Unit defenderIn) {
         attacker = attackerIn;
 		defender = defenderIn;
 
@@ -26,6 +27,7 @@ public class AttackRound {
         // Store current stats.
         waterAtk = attacker.getCurrentWater();
         clayDef = defender.getClay();
+        clayAtk = attacker.getClay();
 
         attacker.setCurrentWater(waterAtk - attackerWaterCost);
 
@@ -43,10 +45,14 @@ public class AttackRound {
             dieDef = true;
         }
 
-        if ((attacker.getClay() - expectedDamage) < 0)
+        if ((attacker.getClay() - expectedCounterDamage) < 0)
         {
+            attacker.setClay(0);
             dieAtk = true;
         }
+        else
+            attacker.setClay(clayAtk - expectedCounterDamage);
+
 
 		// Calculates a utility value using expected damage values
 		utility = calculateUtility();
@@ -57,6 +63,7 @@ public class AttackRound {
     {
         attacker.setCurrentWater(waterAtk);
         defender.setClay(clayDef);
+        attacker.setClay(clayAtk);
     }
     
     public bool attackerDies()
@@ -80,7 +87,13 @@ public class AttackRound {
 		float damage;
 		Attack simulator = new Attack(atk, def);
 
-		// Chance of hitting * (chance of normal damage * normal damage + chance of critical hit * cricical damage)
+        // Chance of hitting * (chance of normal damage * normal damage + chance of critical hit * cricical damage)
+        // when hit chance & crit chance > 0!
+        if (simulator.getHitChance() <= 0)
+            return 0;
+        if (simulator.getCritChance() <= 0)
+            return Mathf.RoundToInt(simulator.getDamage() * simulator.getHitChance());
+
 		damage = simulator.getDamage() * (1 - simulator.getCritChance()) + 3 * simulator.getDamage() * simulator.getCritChance();
 		damage *= simulator.getHitChance();
 
