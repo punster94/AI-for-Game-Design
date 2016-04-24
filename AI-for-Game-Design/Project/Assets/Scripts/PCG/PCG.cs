@@ -32,21 +32,34 @@ public class PCG {
 
 	private Node.SquareType randomOther(Node.SquareType given)
 	{
-		int nodeNum = (int)given;
+#if DEBUG_PCG
+		int tries = 0;
+#endif
+		int squareTypeNum = (int)given;
+		int totalFreq = sandFreq + slipperyFreq + tableFreq;
 		// Extremely inefficient, horrible code
-		while(nodeNum == (int)given)
+		while(squareTypeNum == (int)given)
 		{
+			// TODO: Double check for off-by-one error here
 			// Documentation of Random.Range lies, at least for ints
 			// Second number is INCLUSIVE
-			nodeNum = Random.Range(0, numSquareTypes - 1);
+			squareTypeNum = Random.Range(0, totalFreq - 1);
+			if(squareTypeNum < sandFreq) {
+				squareTypeNum = (int)Node.SquareType.Sandpaper;
+			}
+			else if (squareTypeNum < sandFreq + slipperyFreq) {
+				squareTypeNum = (int)Node.SquareType.Slippery;
+			} else {
+				squareTypeNum = (int)Node.SquareType.TableDef;
+			}
 #if DEBUG_PCG
-			Debug.Log("randomOther(" + (int)given + ") generated " + nodeNum);
+			tries++;
 #endif
 		}
 #if DEBUG_PCG
-		Debug.Log("randomOther(" + (int)given + ") accepted " + nodeNum);
+		Debug.Log("randomOther(" + (int)given + ") accepted " + squareTypeNum + " after " + tries + " tries.");
 #endif
-		return (Node.SquareType)nodeNum;
+		return (Node.SquareType)squareTypeNum;
 	}
 
 	public Node.SquareType[][] generateMap()
