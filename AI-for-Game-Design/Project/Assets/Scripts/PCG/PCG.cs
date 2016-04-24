@@ -124,6 +124,7 @@ public class PCG {
 #endif
 						thisTileFloor = Node.SquareType.Unwalkable;
 					}
+
 					// Have a chance of generating a wall tile at the edge of the "room"
 					else if ((OffsetX == currentNode.Width - 1) || (OffsetY == currentNode.Height - 1))
 					{
@@ -135,7 +136,7 @@ public class PCG {
 							thisTileFloor = Node.SquareType.Unwalkable;
 						}
 					}
-					if(Random.Range(0, roomInteriorVariance - 1) == 0)
+					else if(Random.Range(0, roomInteriorVariance - 1) == 0)
 					{
 						thisTileFloor = randomOther(thisTileFloor);
 					}
