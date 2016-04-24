@@ -6,7 +6,7 @@ using Graph;
 
 public class PCG {
 	// TODO: Might replace these with a #define
-	int randomSeed = 42;
+	int randomSeed = 69;
 	int mapWidth = 39;
 	int mapHeight = 24;
 	// TODO: Fine-tune frequencies
@@ -14,8 +14,13 @@ public class PCG {
 	int slipperyFreq = 1;
 	int sandFreq = 1;
 	int tableFreq = 4;
+	// Within the room type, tiles vary a bit so the room isn't entirely uniform
+	// Room tiles will have a 1 in "roomInteriorVariance" chance of being
+	// something different from its room-define type.
+	int roomInteriorVariance = 5;
 
 	int wallSparseness = 3; // A wall will have a 1 in "wallSparseness" chance of spawning
+	int numSquareTypes = System.Enum.GetNames(typeof(Node.SquareType)).Length; // readability
 
 	public enum SplitDirection { Horizontal, Vertical };
 	PCGnode root;
@@ -23,6 +28,25 @@ public class PCG {
 	public PCG()
 	{
 		root = PCGnode.getOrigin(mapWidth, mapHeight);
+	}
+
+	private Node.SquareType randomOther(Node.SquareType given)
+	{
+		int nodeNum = (int)given;
+		// Extremely inefficient, horrible code
+		while(nodeNum == (int)given)
+		{
+			// Documentation of Random.Range lies, at least for ints
+			// Second number is INCLUSIVE
+			nodeNum = Random.Range(0, numSquareTypes - 1);
+#if DEBUG_PCG
+			Debug.Log("randomOther(" + (int)given + ") generated " + nodeNum);
+#endif
+		}
+#if DEBUG_PCG
+		Debug.Log("randomOther(" + (int)given + ") accepted " + nodeNum);
+#endif
+		return (Node.SquareType)nodeNum;
 	}
 
 	public Node.SquareType[][] generateMap()
@@ -76,9 +100,9 @@ public class PCG {
 			// Grab a PCGnode
 			PCGnode currentNode = finalNodes.Dequeue();
 			// generateMap a floor type from zero to number of tile types defined
-			Node.SquareType floorType = (Node.SquareType)Random.Range((int)0, System.Enum.GetNames(typeof(Node.SquareType)).Length-1);
+			Node.SquareType floorType = (Node.SquareType)Random.Range((int)0, numSquareTypes - 1);
 #if DEBUG_PCG
-			Debug.Log("Random.Range(0," + (System.Enum.GetNames(typeof(Node.SquareType)).Length - 1)+") = "+floorType);
+			Debug.Log("Random.Range(0," + (numSquareTypes - 1)+") = "+floorType);
 #endif
 			// Find the top-left of this PCGnode
 			IntVec2 start = currentNode.TopLeft;
@@ -103,15 +127,19 @@ public class PCG {
 					// Have a chance of generating a wall tile at the edge of the "room"
 					else if ((OffsetX == currentNode.Width - 1) || (OffsetY == currentNode.Height - 1))
 					{
-						if (Random.Range(0, wallSparseness) == 0) {
+						if (Random.Range(0, wallSparseness) == 0)
+						{
 #if DEBUG_PCG
 							Debug.Log("Making interal wall");
 #endif
 							thisTileFloor = Node.SquareType.Unwalkable;
 						}
 					}
-#if DEBUG_PCG
-#endif
+					if(Random.Range(0, roomInteriorVariance - 1) == 0)
+					{
+						thisTileFloor = randomOther(thisTileFloor);
+					}
+
 					// Otherwise, just plop the floor type
 					map[y][x] = thisTileFloor;
 					
