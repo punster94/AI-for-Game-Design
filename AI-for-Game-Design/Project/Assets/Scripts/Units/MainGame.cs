@@ -31,8 +31,7 @@ public class MainGame : MonoBehaviour {
 
         // pathManager = new GraphManager(parent);
 		PCG generator = new PCG();
-        pathManager = //new GraphManager(parent); 
-            new GraphManager(parent, generator.generateMap());
+        pathManager = new GraphManager(parent, generator.generateMap());
 
         pathFinder = pathManager.getGraph();
 
@@ -41,7 +40,7 @@ public class MainGame : MonoBehaviour {
         Vector2 topright = pathFinder.getTopRightBound();
         Vector2 botleft = pathFinder.getBottomLeftBound();
         Vector2 mid = topright - botleft;
-        mid /= 3;
+        mid /= 8;
         KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 6);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
