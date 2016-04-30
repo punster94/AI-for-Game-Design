@@ -238,7 +238,8 @@ class TurnManager
         if (aiUnits.Count == 0)
         {
             pathFinder.clearHighlightedNodes();
-            displayCurrentUnit(playerUnits[0]);
+            if (playerUnits.Count > 0)
+                displayCurrentUnit(playerUnits[0]);
             UIManager.getUIManager().gameOver(true);
             selectionState = State.EnemyTurn;
             moving = true;
@@ -248,7 +249,8 @@ class TurnManager
         if (playerUnits.Count == 0)
         {
             pathFinder.clearHighlightedNodes();
-            displayCurrentUnit(aiUnits[0]);
+            if (aiUnits.Count > 0)
+                displayCurrentUnit(aiUnits[0]);
             UIManager.getUIManager().gameOver(false);
             selectionState = State.EnemyTurn;
             moving = true;

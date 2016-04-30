@@ -352,7 +352,7 @@ public abstract class Unit {
 
 	// Attacks the given enemy Unit
     // Removes undo capability since attack is non-reverseable.
-	public List<AttackResult> attack(Unit enemy, int distance) {
+	public virtual List<AttackResult> attack(Unit enemy, int distance) {
         canUndo = false;
 		return enemy.takeAttackFrom(this, distance, true);
 	}

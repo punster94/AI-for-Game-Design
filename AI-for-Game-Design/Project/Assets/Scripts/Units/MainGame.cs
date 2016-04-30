@@ -49,20 +49,30 @@ public class MainGame : MonoBehaviour {
 
             float spawnType = Random.value;
             
-            if (spawnType < 0.3)
+            if (spawnType < 0.25)
             {
                 addLongArmUnit(enemyUnits, enemyUnitObjects, "Enemy LongArm", spawnEnemy, true);
                 addLongArmUnit(allyUnits, allyUnitObjects, "Ally LongArm", spawnAlly, false);
             }
-            else if (spawnType < 0.55)
+            else if (spawnType < 0.48)
             {
                 addBigGuyUnit(enemyUnits, enemyUnitObjects, "Enemy BigGuy", spawnEnemy, true);
                 addBigGuyUnit(allyUnits, allyUnitObjects, "Ally BigGuy", spawnAlly, false);
             }
-            else if (spawnType < 0.85)
+            else if (spawnType < 0.70)
             {
                 addLongRangeUnit(enemyUnits, enemyUnitObjects, "Enemy LongRange", spawnEnemy, true);
                 addLongRangeUnit(allyUnits, allyUnitObjects, "Ally LongRange", spawnAlly, false);
+            }
+            else if (spawnType <= 0.78)
+            {
+                addClayBallUnit(enemyUnits, enemyUnitObjects, "Enemy ClayBall", spawnEnemy, true);
+                addClayBallUnit(allyUnits, allyUnitObjects, "Ally ClayBall", spawnAlly, false);
+            }
+            else if (spawnType <= 0.85)
+            {
+                addSuperRangeUnit(enemyUnits, enemyUnitObjects, "Enemy SuperRange", spawnEnemy, true);
+                addSuperRangeUnit(allyUnits, allyUnitObjects, "Ally SuperRange", spawnAlly, false);
             }
             else
             {
@@ -75,9 +85,25 @@ public class MainGame : MonoBehaviour {
         allyUnits.Reverse();
 
         turnManager = new TurnManager(pathFinder, allyUnits, enemyUnits);
-	}
+    }
 
-	void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    void addSuperRangeUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
+        Unit newUnit = new SuperRangeUnit(bucket, name, node, enemy);
+        units.Add(newUnit);
+        node.Occupier = newUnit;
+        newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
+    }
+
+    void addClayBallUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
+    {
+        Unit newUnit = new ClayBallUnit(bucket, name, node, enemy);
+        units.Add(newUnit);
+        node.Occupier = newUnit;
+        newUnit.spriteObject.AddComponent<UnitBehavior>().setUnit(newUnit);
+    }
+
+    void addLongArmUnit(List<Unit> units, GameObject bucket, string name, Node node, bool enemy)
     {
 		Unit newUnit = new LongArmUnit(bucket, name, node, enemy);
 		units.Add(newUnit);

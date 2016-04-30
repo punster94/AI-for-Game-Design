@@ -32,7 +32,7 @@ public class Attack {
 	public Attack(Unit attacker, Unit defender) {
         atk = attacker;
         def = defender;
-		damage = Mathf.Max(atk.getClay() - def.getHardness(), 0);
+        damage = Mathf.CeilToInt(atk.getClay() / (def.getHardness() + Mathf.Epsilon));//Mathf.Max(atk.getClay() - def.getHardness(), 0);
 		hitChance = Mathf.Min((atk.getCurrentWater() + atk.getBendiness() / 2.0f) / def.getBendiness(), 1.0f);
 		critChance = Mathf.Min((float) (atk.getBendiness() - def.getBendiness()) / def.getBendiness(), 1.0f);
 	}
