@@ -86,7 +86,7 @@ public abstract class Unit {
         foreach (Node n in path)
             targets.Enqueue(new Vector2(n.getPos().x, n.getPos().y));
 
-        storedCostOfMove = (int)cost;
+        storedCostOfMove = Mathf.CeilToInt((float) cost);
         currentWater -= storedCostOfMove;
         hasNotMovedThisTurn = false;
     }

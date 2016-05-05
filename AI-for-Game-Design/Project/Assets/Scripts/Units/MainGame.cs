@@ -41,7 +41,7 @@ public class MainGame : MonoBehaviour {
         Vector2 botleft = pathFinder.getBottomLeftBound();
         Vector2 mid = topright - botleft;
         mid /= 8;
-        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 6);
+        KeyValuePair<List<Node>, List<Node>> spawnPoints = pathFinder.getSpawnPoints(topright - mid, botleft + mid, 10);
 
         for (int i = 0; i < spawnPoints.Key.Count; i++) {
             Node spawnEnemy = spawnPoints.Key[i];

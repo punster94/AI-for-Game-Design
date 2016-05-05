@@ -1,5 +1,5 @@
 ﻿//#define DEBUG_PATHFINDER_UPDATELOOP // allows graph to auto-update w/physics, display manual paths.
-//#define DEBUG_PATHFINDER_DRAWDEBUG  // draws debug paths and shows start/end nodes.
+#define DEBUG_PATHFINDER_DRAWDEBUG  // draws debug paths and shows start/end nodes.
 //#define DEBUG_PATHFINDER_LOGDEBUG   // sends pathfinding debug to debug. SIGNIFICANT PERFORMANCE IMPACT!
 using UnityEngine;
 using System.Collections.Generic;
@@ -21,7 +21,7 @@ namespace Graph
         private float nodeDensity;
 
         public enum Paths { quadDir, octDir }
-        public static Paths allowedPaths = Paths.quadDir;
+        public static Paths allowedPaths = Paths.octDir;
 
         /// TODO: Implement this in PCG, or use suggestion in MainGame
         /// <summary>

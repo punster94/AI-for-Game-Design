@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Graph;
+using System.Text;
 
 class UnitAI
 {
@@ -34,37 +35,8 @@ class UnitAI
         KeyValuePair<Result, UnitAction> MinMaxResult = MinMax();
         if (subjectRef.getClay() != sanityCheck)
             UnityEngine.Debug.Log("ERROR IN MINMAX AGAIN!");
-        switch (MinMaxResult.Key)
-        {
-            case Result.Success:
-                return MinMaxResult.Value;
 
-            // Nothing in range.
-            case Result.NothingFound:
-                KeyValuePair<Result, UnitAction> AttemptFind = FindUnit();
-
-                //We've won!
-                if (AttemptFind.Key == Result.NothingFound)
-                {
-                    return UnitAction.DoNothing(subjectRef);
-                }
-                return AttemptFind.Value;
-
-            // Note that even if we can attack from the running position, we don't while running,
-            // as we know we can die then.
-            case Result.WillDie:
-                KeyValuePair<Result, UnitAction> runTo = RunAway();
-
-                // fight to the last! we can't move, so...
-                if (runTo.Key == Result.NothingFound)
-                {
-                    return MinMaxResult.Value;
-                }
-                return runTo.Value;
-
-            default:
-                throw new InvalidProgramException("RunAI: MinMaxResult enum reached invalid state: " + MinMaxResult.Key);
-        }
+        return MinMaxResult.Value;
     }
 
     //Internal enum for cleaner code.
@@ -80,97 +52,48 @@ class UnitAI
         MinPriorityQueue<UnitAction> bestMoves = new MinPriorityQueue<UnitAction>();
         int realclay = subjectRef.getClay();
 
-        string counter = "I, " + subjectRef.ident() + " am evaluating moves.\n";
-        int round = 0;
+        StringBuilder debugRoundInfo = new StringBuilder();
+        debugRoundInfo.Append("I, " + subjectRef.ident() + " am evaluating moves.\n");
+        int roundNum = 0;
 
         // The "max-y" part: maximize (damage/counter-damage)
         foreach (Node.NodePointer candidateAttackTarget in targets)
         {
-            int moveCost = candidateAttackTarget.getDist();
-
-            Unit curEnemy = candidateAttackTarget.getTarget().Occupier;
-            counter += "round " + round++ + ": attacking " + curEnemy.ident() +"\n";
-
-            AttackRound util = new AttackRound(subjectRef, moveCost, curEnemy);
-            
-            UnitAction roundMove = new UnitAction(subjectRef, curEnemy, candidateAttackTarget.getStart());
-
-            int totDmg = 0;
-
-            // Will very likely die, enqueue this move as bad, and don't move to next step.
-            if (util.attackerDies())
-            {
-                bestMoves.Enqueue(roundMove, double.PositiveInfinity);
-                util.resetBack();
-                subjectRef.setClay(realclay);
-                counter += "\nround failed, 1st stage.";
-                continue;
-            }
-
-            totDmg += util.getExpectedDamage();
-
-            totDmg += RunEnemyTurn(candidateAttackTarget.getStart());
-
-            // Died. Enqueue with +inf again.
-            if (subjectRef.getClay() <= 0)
-            {
-                bestMoves.Enqueue(roundMove, double.PositiveInfinity);
-                counter += "round failed, 2nd stage.\n";
-            }
-            // enqueue move! min pri queue, so invert answer.
-            else
-            {
-                bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()));
-                counter += "round succeeded, value of " + -(double) totDmg * subjectRef.getClay() + "\n";
-            }
-            
-            util.resetBack();
-            subjectRef.setClay(realclay);
+            roundNum++;
+            TryToAttackTarget(candidateAttackTarget, bestMoves, realclay, debugRoundInfo, roundNum);
         }
 
         // If we're going to die, try to look for spot to run away to.
         if (bestMoves.Count > 0 && bestMoves.currentInversePriority(bestMoves.Peek()) == double.PositiveInfinity)
+        {
             // The "max-y" part: maximize (damage/counter-damage)
             foreach (Node candidateRunSquare in pathManager.getAccessibleNodes(subjectRef))
             {
-                round++;
-                int moveCost = pathManager.costOfSquare(subjectRef, candidateRunSquare);
-                float totDmg = 0.01f;
-                UnitAction roundMove = new UnitAction(subjectRef, null, candidateRunSquare);
-
-                totDmg += RunEnemyTurn(candidateRunSquare);
-
-                // Died. Enqueue with +inf again.
-                if (subjectRef.getClay() <= 0)
-                {
-                    bestMoves.Enqueue(roundMove, double.PositiveInfinity);
-                    counter += "round failed, 2nd stage.\n";
-                }
-                // enqueue move! min pri queue, so invert answer.
-                else
-                {
-                    bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()));
-                    counter += "round succeeded, value of " + -(double)totDmg * subjectRef.getClay() + "\n";
-                }
-                
-                subjectRef.setClay(realclay);
+                roundNum++;
+                TryToRunToSquare(candidateRunSquare, bestMoves, realclay, debugRoundInfo);
             }
+        }
 
+        // lastly, check if there's nothing in range
+        if (bestMoves.Count == 0)
+        {
+            bestMoves.Enqueue(FindUnit(debugRoundInfo).Value, 0);
+        }
 
-        if (counter.Length > 0)
+        if (debugRoundInfo.Length > 0)
         {
             if (bestMoves.Count > 0)
-                counter += "Expected value of best move: " + bestMoves.currentInversePriority(bestMoves.Peek());
+                debugRoundInfo.Append("Expected value of best move: " + bestMoves.currentInversePriority(bestMoves.Peek()));
             else
-                counter += "No best moves.";
-            UnityEngine.Debug.Log(counter);
+                debugRoundInfo.Append("No best moves.");
+            UnityEngine.Debug.Log(debugRoundInfo.ToString());
         }
 
         subjectRef.setClay(realclay);
 
         // no local targets...
         if (bestMoves.Count == 0)
-            return new KeyValuePair<Result, UnitAction>(Result.NothingFound, null);
+            return new KeyValuePair<Result, UnitAction>(Result.Success, UnitAction.DoNothing(subjectRef));
         // all moves die, including running away! fight to the death!
         //else if (bestMoves.currentInversePriority(bestMoves.Peek()) == double.PositiveInfinity)
         //    return new KeyValuePair<Result, UnitAction>(Result.WillDie, bestMoves.Peek());
@@ -178,10 +101,81 @@ class UnitAI
         return new KeyValuePair<Result, UnitAction>(Result.Success, bestMoves.Peek());
     }
 
+    private void TryToAttackTarget(Node.NodePointer candidateAttackTarget, MinPriorityQueue<UnitAction> bestMoves, int realclay, StringBuilder debugRoundInfo, int roundNum)
+    {
+        int moveCost = candidateAttackTarget.getDist();
+
+        Unit curEnemy = candidateAttackTarget.getTarget().Occupier;
+        debugRoundInfo.Append("round " + roundNum + ": attacking " + curEnemy.ident() + "\n");
+
+        AttackRound util = new AttackRound(subjectRef, moveCost, curEnemy);
+
+        UnitAction roundMove = new UnitAction(subjectRef, curEnemy, candidateAttackTarget.getStart());
+
+        int totDmg = 0;
+
+        // Will very likely die, enqueue this move as bad, and don't move to next step.
+        if (util.attackerDies())
+        {
+            bestMoves.Enqueue(roundMove, double.PositiveInfinity);
+            util.resetBack();
+            subjectRef.setClay(realclay);
+            debugRoundInfo.Append("\nround failed, 1st stage.");
+            return;
+        }
+
+        totDmg += util.getExpectedDamage();
+
+        totDmg += SimulateEnemyTurn(candidateAttackTarget.getStart());
+
+        // Died. Enqueue with +inf again.
+        if (subjectRef.getClay() <= 0)
+        {
+            bestMoves.Enqueue(roundMove, double.PositiveInfinity);
+            debugRoundInfo.Append("round failed, 2nd stage.\n");
+        }
+        // enqueue move! min pri queue, so invert answer.
+        else
+        {
+            bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()));
+            debugRoundInfo.Append("round succeeded, value of " + -(double)totDmg * subjectRef.getClay() + "\n");
+        }
+
+        util.resetBack();
+        subjectRef.setClay(realclay);
+    }
+
+    private void TryToRunToSquare(Node candidateRunSquare, MinPriorityQueue<UnitAction> bestMoves, int realclay, StringBuilder debugRoundInfo, double boostMoveVal = 1)
+    {
+        int moveCost = pathManager.costOfSquare(subjectRef, candidateRunSquare);
+        int curWater = subjectRef.getCurrentWater();
+        subjectRef.setCurrentWater(curWater - moveCost);
+        float totDmg = 0.01f;
+        UnitAction roundMove = new UnitAction(subjectRef, null, candidateRunSquare);
+
+        totDmg += SimulateEnemyTurn(candidateRunSquare);
+
+        // Died. Enqueue with +inf again.
+        if (subjectRef.getClay() <= 0)
+        {
+            bestMoves.Enqueue(roundMove, double.PositiveInfinity);
+            debugRoundInfo.Append("round failed, 2nd stage.\n");
+        }
+        // enqueue move! min pri queue, so invert answer.
+        else
+        {
+            bestMoves.Enqueue(roundMove, -((double)totDmg * subjectRef.getClay()) * boostMoveVal);
+            debugRoundInfo.Append("round succeeded, value of " + -(double)totDmg * subjectRef.getClay() + "\n");
+        }
+
+        subjectRef.setCurrentWater(curWater);
+        subjectRef.setClay(realclay);
+    }
+
     // Loop through all things that could attack this position, and continue testing attacks.
     // The "min-y" part. Enemy tries to maximize their (damage/counter-damage)
     // Note: because there is no teamwork, units guestimate that a unit far away might not come to attack them always.
-    private int RunEnemyTurn(Node weWillBeAt)
+    private int SimulateEnemyTurn(Node weWillBeAt)
     {
         int totDmg = 0;
         foreach (Unit enemy in subjectsEnemiesRef)
@@ -197,13 +191,15 @@ class UnitAI
                 int prevClay = subjectRef.getClay();
 
                 //guestimation: if removed, significant performance cost imposed, although becomes more like minmax.
-                float probability = UnityEngine.Mathf.Min(enemyMoveCost / 1.4f, enemy.getMaxWater() / 2);
-                probability /= enemy.getMaxWater();
-                probability = 1 - probability;
+                float invProbability = UnityEngine.Mathf.Min(enemyMoveCost / 1.4f, enemy.getMaxWater() / 2);
+                invProbability /= enemy.getMaxWater();
+                float probability = 1 - invProbability;
 
                 AttackRound subRound = new AttackRound(enemy, enemyMoveCost, subjectRef);
                 int roundClay = subjectRef.getClay();
-                int usCost = UnityEngine.Mathf.RoundToInt((probability) * (prevClay - roundClay));
+                
+                // we use ceil so we don't run away to a dumb spot because of rounding...
+                int usCost = UnityEngine.Mathf.CeilToInt((probability) * (prevClay - roundClay));
 
                 // reset enemy state.
                 subRound.resetBack();
@@ -219,32 +215,62 @@ class UnitAI
         return totDmg;
     }
 
-    private KeyValuePair<Result, UnitAction> FindUnit()
+    private KeyValuePair<Result, UnitAction> FindUnit(StringBuilder debugRoundInfo)
     {
         Predicate<Node> findEn = (Node q) =>
         {
             bool isOccupied = q.Occupied;
             if (!isOccupied)
                 return false;
+            // try to simulate attack round before going near.
             if (q.Occupier.isEnemy() != subjectRef.isEnemy())
-                return true;
+            {
+                int curEnemyWater = q.Occupier.getCurrentWater();
+                q.Occupier.setCurrentWater(q.Occupier.getMaxWater());
+                AttackRound util = new AttackRound(subjectRef, subjectRef.getCurrentWater(), q.Occupier);
+                util.resetBack();
+                q.Occupier.setCurrentWater(curEnemyWater);
+
+                if (!util.attackerDies() && util.getUtility() > UnityEngine.Mathf.Epsilon)
+                    return true;
+                else
+                    return false;
+            }
             return false;
         };
 
         Node closestEnemyNode = pathManager.getClosestNode(subjectRef, findEn);
+        // can't attack, or no nodes left.
         if (closestEnemyNode == null)
-            return new KeyValuePair<Result, UnitAction>(Result.NothingFound, null);
+        {
+            return RunAway();
+        }
 
         Queue<Node> path = new Queue<Node>();
         pathFinderRef.AStar(path, subjectRef.getNode(), closestEnemyNode, closestEnemyNode);
         
         Node goTo = subjectRef.getNode();
 
+        MinPriorityQueue<UnitAction> bestMoves = new MinPriorityQueue<UnitAction>();
+        int boosterVal = 1;
+
         // go to farthest path.
         while (path.Count > 0 && pathManager.canWalkTo(subjectRef, path.Peek()))
-            goTo = path.Dequeue();
+        {
+            TryToRunToSquare(path.Dequeue(), bestMoves, subjectRef.getClay(), debugRoundInfo, boosterVal);
+            // add 3x multiplier for each square closer.
+            boosterVal += 3;
+        }
 
-        UnitAction moveCloserToClosestEnemy = new UnitAction(subjectRef, null, goTo);
+        UnitAction moveCloserToClosestEnemy;
+
+        if (bestMoves.Count == 0)
+            moveCloserToClosestEnemy = new UnitAction(subjectRef, null, goTo);
+        // if we don't die by staying still/moving, do it.
+        else if (bestMoves.currentInversePriority(bestMoves.Peek()) != double.PositiveInfinity)
+            moveCloserToClosestEnemy = bestMoves.Dequeue();
+        else
+            moveCloserToClosestEnemy = RunAway().Value;
 
         return new KeyValuePair<Result, UnitAction>(Result.Success, moveCloserToClosestEnemy);
     }

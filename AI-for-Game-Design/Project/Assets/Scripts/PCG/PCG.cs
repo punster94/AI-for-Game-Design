@@ -31,11 +31,11 @@ public class PCG {
         randomSeed = (int)System.DateTime.Now.Ticks;
 
         // most (probably 99%+) seeds are good, but for demo purposes we limited it to these:
-        int[] interestingSeeds = { 1388496409, 1747914820, 2050103260, -764651076, 17163986, 1200539575, 1462277939 };
+        int[] interestingSeeds = { 1388496409, 1747914820, 2050103260, -764651076, 17163986, 1200539575, 1462277939, -541820026 };
 
         // comment these two lines out for truly random PCG.
-        randomSeed = Random.Range(0, interestingSeeds.Length - 1);
-        randomSeed = interestingSeeds[randomSeed];
+        // randomSeed = Random.Range(0, interestingSeeds.Length - 1);
+        // randomSeed = interestingSeeds[randomSeed];
 
 
         Debug.Log("Seed: " + randomSeed);

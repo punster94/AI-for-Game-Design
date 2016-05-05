@@ -8,7 +8,7 @@ public class SuperRangeUnit : Unit {
 	Sprite sprite = Resources.Load<Sprite>("SuperRange");
     
 	// Constructs a LongRangeUnit given the GameObject it will relate to.
-	public SuperRangeUnit(GameObject parent, string name, Node gridTile, bool isEnemy) : base(7, 5, 6, 0, 14, 17, gridTile, isEnemy){
+	public SuperRangeUnit(GameObject parent, string name, Node gridTile, bool isEnemy) : base(7, 2, 8, 0, 10, 16, gridTile, isEnemy){
 		GameObject g = new GameObject(name);
 		g.transform.parent = parent.transform;
 		g.transform.position = gridTile.getPos();
