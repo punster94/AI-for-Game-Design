@@ -29,11 +29,13 @@ namespace Graph
             // Current targets = All enemies we can shoot from this turn, paired with the square they can shoot at.
             private List<Node.NodePointer> currentTargets;
 
+            private Dictionary<Node, int> costToWalkToSquare;
+
 
             private PathFinder pathFinderRef;
             private readonly Unit uRef;
 
-            public PathMemoizer(PathFinder p, Unit unitRef)
+            public PathMemoizer(PathFinder p, Unit unitRef, bool enemyTeam = false)
             {
                 uRef = unitRef;
                 pathFinderRef = p;
@@ -44,13 +46,20 @@ namespace Graph
                 nodesInRangeSet = new HashSet<Node>();
                 reverseNodesInRangeSetCost = new Dictionary<Node, int>();
                 currentTargets = new List<Node.NodePointer>();
+                costToWalkToSquare = new Dictionary<Node, int>();
 
-                initialize(unitRef.getNode(), unitRef.getCurrentWater());
+                float waterval = 0;
+                if (enemyTeam)
+                    waterval = unitRef.getMaxWater();
+                else
+                    waterval = unitRef.getCurrentWater();
+
+                initialize(unitRef.getNode(), waterval, enemyTeam);
             }
 
-            private void initialize(Node start, float endurance)
+            private void initialize(Node start, float endurance, bool canWalkThroughUnits)
             {
-                pathFinderRef.nodesThatSatisfyPred(start, pathfindPredicate, endurance);
+                pathFinderRef.nodesThatSatisfyPred(start, pathfindPredicate, endurance, false, !canWalkThroughUnits);
                 foreach (Node n in nodesCanWalkTo)
                 {
                     shootingFrom = n;
@@ -63,6 +72,11 @@ namespace Graph
                 return reverseNodesInRangeSetCost[square];
             }
 
+            public int costToSquare(Node square)
+            {
+                return costToWalkToSquare[square];
+            }
+
             // THIS IS A CHEAT: We only look at the node when we add to the done set.
             // We only add to the done set when this is called...
             // We can thus look at each node once, run what we need to run, and do this efficiently for each set.
@@ -71,6 +85,7 @@ namespace Graph
             {
                 nodesCanWalkTo.Add(lookAt);
                 nodesCanWalkToSet.Add(lookAt);
+                costToWalkToSquare[lookAt] = UnityEngine.Mathf.RoundToInt((float) lookAt.realCost);
                 return true;
             }
 
@@ -156,7 +171,7 @@ namespace Graph
 
             foreach (Unit e in enemies)
             {
-                enemyMemoizer.Add(e, new PathMemoizer(pathFinderRef, e));
+                enemyMemoizer.Add(e, new PathMemoizer(pathFinderRef, e, true));
             }
         }
 
@@ -233,6 +248,16 @@ namespace Graph
             if (u.Equals(currentUnit))
                 return unitRef.getAccessibleNodesSet().Contains(node);
             return enemyMemoizer[u].getAccessibleNodesSet().Contains(node);
+        }
+
+        /// <summary>
+        /// Returns true if a unit can walk to the given node with current endurance values.
+        /// </summary>
+        internal int costOfSquare(Unit u, Node node)
+        {
+            if (u.Equals(currentUnit))
+                return unitRef.costToSquare(node);
+            return enemyMemoizer[u].costToSquare(node);
         }
     }
 }

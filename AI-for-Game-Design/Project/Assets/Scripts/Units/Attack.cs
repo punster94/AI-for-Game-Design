@@ -32,11 +32,9 @@ public class Attack {
 	public Attack(Unit attacker, Unit defender) {
         atk = attacker;
         def = defender;
-		damage = Mathf.Max(attacker.getClay() - defender.getHardness(), 0);
-        // TODO: water: fix this to be more balanced.
-        float waterVal = Mathf.Max(attacker.getMaxWater() / 2, attacker.getCurrentWater());
-		hitChance = Mathf.Min((waterVal - defender.getBendiness()) / defender.getBendiness(), 1.0f);
-		critChance = Mathf.Min((attacker.getBendiness() - defender.getBendiness()) / defender.getBendiness(), 1.0f);
+        damage = Mathf.CeilToInt(atk.getClay() / (def.getHardness() + Mathf.Epsilon));//Mathf.Max(atk.getClay() - def.getHardness(), 0);
+		hitChance = Mathf.Min((atk.getCurrentWater() + atk.getBendiness() / 2.0f) / def.getBendiness(), 1.0f);
+		critChance = Mathf.Min((float) (atk.getBendiness() - def.getBendiness()) / def.getBendiness(), 1.0f);
 	}
     
     public Unit getAttacker()
@@ -46,8 +44,15 @@ public class Attack {
 
     public override string ToString()
     {
-        float ev = getDamage() * (1 - getCritChance()) + 3 * getDamage() * getCritChance();
-        ev *= getHitChance();
+        float ev = 0;
+        if (getHitChance() > 0)
+        {
+            if (getCritChance() > 0)
+                ev = getDamage() * (1 - getCritChance()) + 3 * getDamage() * getCritChance();
+            else
+                ev = getDamage();
+            ev *= getHitChance();
+        }
         return "Damage: " + damage + ", hitChance: " + hitChance + ", critChance: " + critChance + ", ev: " + ev;
     }
 }
